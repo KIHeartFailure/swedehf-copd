@@ -1,0 +1,285 @@
+```{r}
+#| label: outcomesfunc
+#| cache: true
+#| cache.comments: false
+
+vars_crr <- names(mice::complete(imprsdata, 1))
+modvars_crr <- vars_crr[str_detect(vars_crr, paste0(paste0(modvars, "_cr_"), collapse = "|"))]
+coxvars <- modvars
+coxvars[modvars %in% stratavars] <- paste0("strata(", coxvars[modvars %in% stratavars], ")")
+
+outcomesfunc <- function(time, event, eventname, xvar, rep = FALSE, fg = FALSE) {
+  levs <- levels(rsdata %>% pull(!!sym(xvar)))
+  if (xvar == "sos_com_copd") {
+    levs <- str_replace(levs, "No", "No COPD")
+    levs <- str_replace(levs, "Yes", "COPD")
+  }
+
+  nlevs <- length(levs)
+
+  out <- data.frame(matrix(NA, ncol = 2 + nlevs, nrow = if_else(fg, 5, 3)))
+  colnames(out) <- c("Outcome", "Model", levs)
+
+  out[1, 1] <- eventname
+
+  ## incidence rate
+  out[1, 2] <- "No events, sum py, events/100py (95% CI)"
+
+  # 1 row - incidence
+  if (!rep) {
+    ev <- rsdata %>%
+      group_by(!!sym(xvar)) %>%
+      summarise(
+        ev = sum(!!sym(event) == "Yes"),
+        s = sum(!!sym(time) / 365.25),
+        .groups = "drop"
+      )
+  }
+  if (rep) {
+    ev <- rsdata %>%
+      group_by(!!sym(xvar)) %>%
+      summarise(
+        ev = sum(!!sym(event)),
+        s = sum(!!sym(time) / 365.25),
+        .groups = "drop"
+      )
+  }
+
+  r <- pois.exact(x = ev$ev, pt = ev$s / 100)
+
+  out[1, 3:(nlevs + 2)] <- paste0(
+    ev$ev, ", ",
+    fn(ev$s, dig = 0), ", ",
+    fn(r$rate, dig = 0), " (",
+    fn(r$lower, dig = 0), "-",
+    fn(r$upper, dig = 0), ")"
+  )
+
+  if (!rep) {
+    ## 2 row - crude regression
+    out[2, 2] <- "Crude HR (95% CI), p-value"
+    mod <- summary(coxph(formula(paste0("Surv(", time, ",", event, "== 'Yes') ~ ", xvar)),
+      data = rsdata
+    ))
+
+    out[2, 3:(nlevs + 2)] <- c(
+      "ref",
+      paste0(
+        fn(mod$conf.int[, "exp(coef)"], dig = 2),
+        " (", fn(mod$conf.int[, "lower .95"], dig = 2),
+        "-", fn(mod$conf.int[, "upper .95"], dig = 2), "), ",
+        fn(mod$coef[, "Pr(>|z|)"], dig = 3, p = TRUE)
+      )
+    )
+
+    ## 3 row - adjusted regression
+    out[3, 2] <- "Adjusted HR (95% CI), p-value"
+    mod <- summary(pool(with(imprsdata, coxph(formula(paste0(
+      "Surv(", time, ",", event, " == 'Yes') ~ ", xvar, "+", paste(coxvars, collapse = " + ")
+    ))))))
+
+    out[3, 3:(nlevs + 2)] <- c(
+      "ref",
+      paste0(
+        fn(exp(mod$estimate[1:(nlevs - 1)]), dig = 2),
+        " (", fn(exp(mod$estimate[1:(nlevs - 1)] - global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2),
+        "-", fn(exp(mod$estimate[1:(nlevs - 1)] + global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2), "), ",
+        fn(mod$p.value[1:(nlevs - 1)], dig = 3, p = TRUE)
+      )
+    )
+
+    if (fg) {
+      out[4, 2] <- "Crude SHR (95% CI), p-value"
+      mod <- summary(crr(
+        ftime = rsdata %>% pull(!!sym(time)),
+        fstatus = rsdata %>% pull(!!sym(paste0(event, "_cr"))),
+        cov1 = rsdata %>% select(starts_with(paste0(xvar, "_cr_"))),
+        failcode = 1,
+        cencode = 0
+      ))
+
+      out[4, 3:(nlevs + 2)] <- c(
+        "ref",
+        paste0(
+          fn(mod$coef[, "exp(coef)"], dig = 2),
+          " (",
+          fn(exp(mod$coef[, "coef"] - global_z05 * mod$coef[, "se(coef)"]), dig = 2),
+          "-",
+          fn(exp(mod$coef[, "coef"] + global_z05 * mod$coef[, "se(coef)"]), dig = 2), "), ",
+          fn(mod$coef[, "p-value"], dig = 3, p = TRUE)
+        )
+      )
+
+      # out[5, 2] <- "Adjusted SHR (95% CI), p-value"
+      # modvars_crr2 <- c(vars_crr[str_detect(vars_crr, paste0(xvar, "_cr_"))], modvars_crr)
+      # mod <- crr_mids(time, paste0(event, "_cr"), xvars = modvars_crr2, imprsdata)
+      # mod <- summary(pool(mod))
+      #
+      # out[5, 3:(nlevs + 2)] <- c(
+      #   "ref",
+      #   paste0(
+      #     fn(exp(mod$estimate[1:(nlevs - 1)]), dig = 2),
+      #     " (", fn(exp(mod$estimate[1:(nlevs - 1)] - global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2),
+      #     "-", fn(exp(mod$estimate[1:(nlevs - 1)] + global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2), "), ",
+      #     fn(mod$p.value[1:(nlevs - 1)], dig = 3, p = TRUE)
+      #   )
+      # )
+    }
+  }
+
+  if (rep) {
+    ## 2 row - crude regression
+    out[2, 2] <- "Crude RR (95% CI), p-value"
+    mod <- summary(glm.nb(formula(paste0(event, " ~ ", xvar, " + offset(log(sos_outtime_death))")),
+      data = rsdata %>% filter(sos_outtime_death > 0)
+    ))
+
+    out[2, 3:(nlevs + 2)] <- c("ref", paste0(
+      fn(exp(mod$coefficients[2:nlevs, 1]), dig = 2),
+      " (", fn(exp(mod$coefficients[2:nlevs, 1] - global_z05 * mod$coefficients[2:nlevs, 2]), dig = 2),
+      "-", fn(exp(mod$coefficients[2:nlevs, 1] + global_z05 * mod$coefficients[2:nlevs, 2]), dig = 2), "), ",
+      fn(mod$coefficients[2:nlevs, 4], dig = 3, p = TRUE)
+    ))
+
+    ## 3 row - adjusted regression
+    imprsdata0 <- miceadds::subset_datlist(imprsdata, expr_subset = rsdata$sos_outtime_death > 0)
+    mod <- with(imprsdata0, glm.nb(formula(paste0(
+      event, " ~ ", xvar, " + offset(log(sos_outtime_death)) + ",
+      paste0(modvars, collapse = " + ")
+    ))))
+    mod <- summary(pool(mod))
+    out[3, 2] <- "Adjusted RR (95% CI), p-value"
+    out[3, 3:(nlevs + 2)] <- c("ref", paste0(
+      fn(exp(mod$estimate[2:nlevs]), dig = 2),
+      " (", fn(exp(mod$estimate[2:nlevs] - global_z05 * mod$std.error[2:nlevs]), dig = 2),
+      "-", fn(exp(mod$estimate[2:nlevs] + global_z05 * mod$std.error[2:nlevs]), dig = 2), "), ",
+      fn(mod$p.value[2:nlevs], dig = 3, p = TRUE)
+    ))
+  }
+  return(out)
+}
+```
+
+```{r}
+#| label: tbl-outcomes
+#| cache: true
+#| cache.comments: false
+#| dependson: outcomesfunc
+#| tbl-cap: "Association between COPD and outcomes"
+
+cvdeathhfhosp <- outcomesfunc(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_deathcvhosphf",
+  eventname = "CVD/First HF hospitalization",
+  xvar = "sos_com_copd",
+  fg = T
+)
+cvdeath <- outcomesfunc(
+  time = "sos_outtime_death",
+  event = "sos_out_deathcv",
+  eventname = "CVD",
+  xvar = "sos_com_copd",
+  fg = F
+)
+hfhosp <- outcomesfunc(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_hosphf",
+  eventname = "First HF hospitalization",
+  xvar = "sos_com_copd",
+  fg = F
+)
+rephfhosp <- outcomesfunc(
+  time = "sos_outtime_death",
+  event = "sos_out_counthosphf",
+  eventname = "Total HF hospitalization",
+  xvar = "sos_com_copd",
+  rep = TRUE
+)
+death <- outcomesfunc(
+  time = "sos_outtime_death",
+  event = "sos_out_death",
+  eventname = "All-cause mortality",
+  xvar = "sos_com_copd"
+)
+noncvdeath <- outcomesfunc(
+  time = "sos_outtime_death",
+  event = "sos_out_deathnoncv",
+  eventname = "Non-CV mortality",
+  xvar = "sos_com_copd",
+  fg = F
+)
+outall <- rbind(
+  cvdeathhfhosp,
+  cvdeath,
+  hfhosp,
+  rephfhosp,
+  death,
+  noncvdeath
+)
+
+make_one_xlsxsheet(outall)
+
+default_kable(outall)
+```
+
+```{r}
+#| label: tbl-outcomes-3
+#| cache: true
+#| cache.comments: false
+#| dependson: outcomesfunc
+#| tbl-cap: "Association between COPD 3 groups and outcomes"
+
+cvdeathhfhosp <- outcomesfunc(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_deathcvhosphf",
+  eventname = "CVD/First HF hospitalization",
+  xvar = "sos_com_copd2",
+  fg = F
+)
+cvdeath <- outcomesfunc(
+  time = "sos_outtime_death",
+  event = "sos_out_deathcv",
+  eventname = "CVD",
+  xvar = "sos_com_copd2",
+  fg = F
+)
+hfhosp <- outcomesfunc(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_hosphf",
+  eventname = "First HF hospitalization",
+  xvar = "sos_com_copd2",
+  fg = F
+)
+rephfhosp <- outcomesfunc(
+  time = "sos_outtime_death",
+  event = "sos_out_counthosphf",
+  eventname = "Total HF hospitalization",
+  xvar = "sos_com_copd2",
+  rep = TRUE
+)
+death <- outcomesfunc(
+  time = "sos_outtime_death",
+  event = "sos_out_death",
+  eventname = "All-cause mortality",
+  xvar = "sos_com_copd2"
+)
+noncvdeath <- outcomesfunc(
+  time = "sos_outtime_death",
+  event = "sos_out_deathnoncv",
+  eventname = "Non-CV mortality",
+  xvar = "sos_com_copd2",
+  fg = F
+)
+outall3 <- rbind(
+  cvdeathhfhosp,
+  cvdeath,
+  hfhosp,
+  rephfhosp,
+  death,
+  noncvdeath
+)
+
+make_one_xlsxsheet(outall3)
+
+default_kable(outall3)
+```

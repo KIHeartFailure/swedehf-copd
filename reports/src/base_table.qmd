@@ -1,0 +1,221 @@
+```{r}
+#| label: tbl-basefunc
+#| cache: true
+#| cache.comments: false
+basetabfunc <- function(data, colvar, novar = NULL) {
+  if (!is.null(novar)) tabvars <- tabvars[!tabvars %in% novar]
+
+  tab1 <- print(
+    CreateTableOne(
+      vars = tabvars,
+      strata = colvar,
+      data = data
+    ),
+    smd = FALSE,
+    missing = TRUE,
+    printToggle = FALSE,
+    nonnormal = tabvars,
+    catDigits = 1,
+    contDigits = 1,
+    noSpaces = TRUE,
+    explain = FALSE
+  )
+  tab1 <- as_tibble(cbind(var = rownames(tab1), tab1)) %>%
+    select(-test) %>%
+    select(var, Missing, everything())
+
+  tab1 <- tab1 %>%
+    # remove = Yes
+    mutate(across(everything(), \(x) str_replace_all(x, fixed(" = Yes"), ""))) %>%
+    # to get labs and units in place
+    mutate(
+      var_tmp = str_split(var, " = ", simplify = TRUE)[, 1],
+      val_tmp = str_split(var, " = ", simplify = TRUE)[, 2],
+      # if recoding or categorizing will still get org label
+      var_tmp2 = str_replace_all(var_tmp, "(_cat2|_cat)", ""),
+      # if shf/sos combination  will still get org label
+      var_tmp2 = str_replace_all(var_tmp2, "shf_sos_com_", "sos_com_")
+    )
+
+  tab1 <- left_join(tab1,
+    metavars %>%
+      select(variable, label, unit),
+    by = c("var_tmp2" = "variable")
+  ) %>%
+    mutate(
+      Variable = coalesce(label, var_tmp),
+      Variable = if_else(!is.na(unit),
+        paste0(Variable, " (", unit, ")"),
+        Variable
+      ),
+      Variable = if_else(val_tmp != "",
+        paste0(Variable, " ", val_tmp),
+        Variable
+      ),
+      # small fixes
+      Variable = str_replace_all(Variable, fixed("Disposable income (100 SEK)"), "Income")
+    )
+
+  levs <- levels(rsdata %>% pull(!!sym(colvar)))
+  if (colvar == "sos_com_copd") {
+    levs <- str_replace(levs, "No", "No COPD")
+    levs <- str_replace(levs, "Yes", "COPD")
+  }
+  cn <- c("Variable", "Missing (%)", levs, "p-value")
+
+  # excel
+  tab1_xls <- tab1 %>%
+    mutate(
+      footnote = if_else(var_tmp %in% modvars, "*", ""),
+      Variable = paste0(Variable, footnote)
+    ) %>%
+    select(Variable, Missing:p)
+  tab1_xls <- tab1_xls %>%
+    add_row(Variable = "*Included in multiple imputation, logistic and cox regresion models.")
+
+  make_one_xlsxsheet(tab1_xls, colnames = cn)
+
+  # footnotes
+  tab1 <- tab1 %>%
+    mutate(
+      footnote1 = if_else(var_tmp %in% modvars, footnote_marker_symbol(1), ""),
+      footnote2 = if_else(str_detect(var_tmp, "^shf_"), footnote_marker_alphabet(1), ""),
+      footnote3 = if_else(str_detect(var_tmp, "sos_"), footnote_marker_alphabet(2), ""),
+      footnote4 = if_else(str_detect(var_tmp, "^scb_"), footnote_marker_alphabet(3), "")
+    ) %>%
+    unite(footnote, starts_with("footnote"), sep = "") %>%
+    mutate(
+      # so no probs
+      Variable = sanitize_text(Variable),
+      Variable = paste0(Variable, footnote),
+      Variable = str_replace_all(Variable, fixed("²"), "\\textsuperscript{2}")
+      # Variable = str_replace_all(Variable, fixed("$\\backslash$hspace\\{1em\\}"), fixed("\\hspace{1em}")),
+      # Variable = str_replace_all(Variable, fixed("$>$="), "\\u2264"),
+      # Variable = str_replace_all(Variable, fixed("$<$="), "$\\leq$"),
+    ) %>%
+    select(Variable, Missing:p)
+
+  indent_rows <- tab1 %>%
+    mutate(
+      indent_rows = str_detect(Variable, "^  "),
+      rows = row_number()
+    ) %>%
+    filter(indent_rows) %>%
+    pull(rows)
+
+  cn <- sanitize_text(cn)
+  if (colvar == "sos_com_copd2") {
+    cn <- str_replace(cn, "COPD without hospitalization", "COPD without\nhospitalization")
+    cn <- str_replace(cn, fixed("COPD $>$=1 hospitalization"), "COPD $>$=1\nhospitalization")
+  }
+  cn <- linebreak(cn, align = "l")
+
+  default_kable(tab1,
+    font_size = 5.5,
+    longtable = TRUE,
+    escape = FALSE,
+    col.names = cn
+  ) %>%
+    add_indent(indent_rows) %>%
+    footnote(
+      footnote_order = c("general", "symbol", "alphabet"),
+      general_title = "",
+      general = c(
+        "Categorical variables are presented with n (%) and tested with chi-square test and continuous variables with median [q1-q3] and tested with Kruskal-Wallis test."
+      ),
+      symbol = c("Included in multiple imputation, logistic and cox regresion models."),
+      alphabet = c(
+        "Source: SwedeHF",
+        "Source: NPR",
+        "Source: SCB"
+      ),
+      threeparttable = T
+    )
+}
+```
+
+```{r}
+#| label: tbl-base
+#| cache: true
+#| cache.comments: false
+#| dependson: tbl-basefunc
+#| tbl-cap: "Baseline characteristics"
+basetabfunc(data = rsdata, colvar = "sos_com_copd")
+```
+
+\clearpage
+
+```{r}
+#| label: tbl-base-ref
+#| cache: true
+#| cache.comments: false
+#| dependson: tbl-basefunc
+#| tbl-cap: "Baseline characteristics - HFrEF"
+basetabfunc(data = rsdata %>% filter(shf_ef_cat == "HFrEF"), colvar = "sos_com_copd", novar = "shf_ef_cat")
+```
+
+\clearpage
+
+```{r}
+#| label: tbl-base-mref
+#| cache: true
+#| cache.comments: false
+#| dependson: tbl-basefunc
+#| tbl-cap: "Baseline characteristics - HFmrEF"
+basetabfunc(data = rsdata %>% filter(shf_ef_cat == "HFmrEF"), colvar = "sos_com_copd", novar = "shf_ef_cat")
+```
+
+\clearpage
+
+```{r}
+#| label: tbl-base-pef
+#| cache: true
+#| cache.comments: false
+#| dependson: tbl-basefunc
+#| tbl-cap: "Baseline characteristics - HFpEF"
+basetabfunc(data = rsdata %>% filter(shf_ef_cat == "HFpEF"), colvar = "sos_com_copd", novar = "shf_ef_cat")
+```
+
+\clearpage
+
+```{r}
+#| label: tbl-base-3
+#| cache: true
+#| cache.comments: false
+#| dependson: tbl-basefunc
+#| tbl-cap: "Baseline characteristics - 3 groups"
+basetabfunc(data = rsdata, colvar = "sos_com_copd2")
+```
+
+\clearpage
+
+```{r}
+#| label: tbl-base-3-ref
+#| cache: true
+#| cache.comments: false
+#| dependson: tbl-basefunc
+#| tbl-cap: "Baseline characteristics - 3 groups HFrEF"
+basetabfunc(data = rsdata %>% filter(shf_ef_cat == "HFrEF"), colvar = "sos_com_copd2", novar = "shf_ef_cat")
+```
+
+\clearpage
+
+```{r}
+#| label: tbl-base-3-mref
+#| cache: true
+#| cache.comments: false
+#| dependson: tbl-basefunc
+#| tbl-cap: "Baseline characteristics - 3 groups HFmrEF"
+basetabfunc(data = rsdata %>% filter(shf_ef_cat == "HFmrEF"), colvar = "sos_com_copd2", novar = "shf_ef_cat")
+```
+
+\clearpage
+
+```{r}
+#| label: tbl-base-3-pef
+#| cache: true
+#| cache.comments: false
+#| dependson: tbl-basefunc
+#| tbl-cap: "Baseline characteristics - 3 groups HFpEF"
+basetabfunc(data = rsdata %>% filter(shf_ef_cat == "HFpEF"), colvar = "sos_com_copd2", novar = "shf_ef_cat")
+```

@@ -1,0 +1,198 @@
+```{r}
+#| label: outcomessubfunc
+#| cache: true
+#| cache.comments: false
+
+coxvars <- modvars
+coxvars[modvars %in% stratavars] <- paste0("strata(", coxvars[modvars %in% stratavars], ")")
+outcomessubfunc <- function(time = "sos_outtime_hosphf", event = "sos_out_deathcvhosphf", xvar = "sos_com_copd", intvar) {
+  if (xvar != "sos_com_copd") stop("Incidence and interactions need fix")
+  levs <- levels(rsdata %>% pull(!!sym(xvar)))
+  if (xvar == "sos_com_copd") {
+    levs <- str_replace(levs, "No", "No COPD")
+    levs <- str_replace(levs, "Yes", "COPD")
+  }
+  nlevs <- length(levs)
+
+  levsint <- levels(rsdata %>% pull(!!sym(intvar)))
+  nlevsint <- length(levsint)
+
+  out <- data.frame(matrix(NA, ncol = 8, nrow = nlevsint + 1))
+  colnames(out) <- c("var", "level", "event", "hr", "lci", "uci", "p", "pint")
+
+  out[1, 1] <- intvar
+  out[2:(nlevsint + 1), 2] <- paste0("  ", levsint)
+
+  ## incidence rate
+  ev <- rsdata %>%
+    filter(!is.na(!!sym(intvar))) %>%
+    group_by(!!sym(xvar), !!sym(intvar)) %>%
+    summarise(
+      ev = sum(!!sym(event) == "Yes"),
+      s = sum(!!sym(time) / 365.25),
+      .groups = "drop"
+    )
+  r <- pois.exact(x = ev$ev, pt = ev$s / 100)
+
+  evra <- paste0(
+    ev$ev, ", ",
+    fn(r$rate, dig = 0), " (",
+    fn(r$lower, dig = 0), "-",
+    fn(r$upper, dig = 0), ")"
+  )
+  out[2:(nlevsint + 1), 3] <- paste0(evra[ev$sos_com_copd == "No"], "/", evra[ev$sos_com_copd == "Yes"])
+
+  ## adjusted regression
+  coxvars2 <- coxvars[!modvars %in% c(intvar)]
+  for (i in seq_along(levsint)) {
+    mod <- with(imprsdata, coxph(formula(paste0(
+      "Surv(", time, ",", event, " == 'Yes') ~ ", xvar, " * relevel(", intvar, ", ref = '", levsint[i], "') +", paste(coxvars2, collapse = " + ")
+    ))))
+    smod <- summary(pool(mod))
+
+    out[(i + 1), "hr"] <- exp(smod$estimate[1:(nlevs - 1)])
+    out[(i + 1), "lci"] <- exp(smod$estimate[1:(nlevs - 1)] - global_z05 * smod$std.error[1:(nlevs - 1)])
+    out[(i + 1), "uci"] <- exp(smod$estimate[1:(nlevs - 1)] + global_z05 * smod$std.error[1:(nlevs - 1)])
+    out[(i + 1), "p"] <- fn(smod$p.value[1:(nlevs - 1)], dig = 3, p = TRUE)
+
+    if (i == 1) {
+      mod_noint <- with(imprsdata, coxph(formula(paste0(
+        "Surv(", time, ",", event, " == 'Yes') ~ ", xvar, " + relevel(", intvar, ", ref = '", levsint[i], "') +", paste(coxvars2, collapse = " + ")
+      ))))
+      pint <- mice::D1(mod, mod_noint)
+      out[1, "pint"] <- fn(pint$result[, "P(>F)"], p = T, dig = 3)
+    }
+  }
+  return(out)
+}
+
+outcomessub <- outcomessubfunc(intvar = "shf_ef_cat")
+outcomessub <- bind_rows(outcomessub, outcomessubfunc(intvar = "shf_age_cat"))
+outcomessub <- bind_rows(outcomessub, outcomessubfunc(intvar = "shf_sex"))
+outcomessub <- bind_rows(outcomessub, outcomessubfunc(intvar = "shf_sos_com_diabetes"))
+outcomessub <- bind_rows(outcomessub, outcomessubfunc(intvar = "shf_gfrckdepi_cat"))
+outcomessub <- bind_rows(outcomessub, outcomessubfunc(intvar = "shf_ntprobnp_cat"))
+outcomessub <- bind_rows(outcomessub, outcomessubfunc(intvar = "shf_location"))
+```
+
+```{r}
+#| label: fig-outcomes-subgrups
+#| cache: true
+#| cache.comments: false
+#| dependson: outcomessubfunc
+#| fig-cap: "Association between COPD and outcomes by subgroups"
+#| fig-width: 10
+#| fig-height: 6
+outcomessub <- outcomessub %>%
+  mutate(
+    var_tmp = var,
+    var_tmp = str_replace_all(var_tmp, "(_cat2|_cat)", ""),
+    # if shf/sos combination  will still get org label
+    var_tmp = str_replace_all(var_tmp, "shf_sos_com_", "sos_com_")
+  )
+
+outcomessub <- left_join(outcomessub,
+  metavars %>%
+    select(variable, label, unit),
+  by = c("var_tmp" = "variable")
+) %>%
+  mutate(
+    Variable = coalesce(label, var_tmp),
+    Variable = if_else(!is.na(unit),
+      paste0(Variable, " (", unit, ")"),
+      Variable
+    ),
+    # small fixes
+    Variable = str_replace_all(Variable, fixed("Disposable income (100 SEK)"), "Income"),
+    hrcip = if_else(!is.na(hr), paste0(
+      fn(hr, dig = 2),
+      " (", fn(lci, dig = 2),
+      "-", fn(uci, dig = 2), "), ",
+      p
+    ), NA),
+    cols = factor(case_when(
+      p >= 0.05 ~ 2,
+      hr >= 1 ~ 1,
+      hr < 1 ~ 3
+    )),
+    Variable = coalesce(Variable, level),
+    Variable = str_replace_all(Variable, ">=", "\u2265"),
+    Variable = str_replace_all(Variable, "<=", "\u2264"),
+    Variable = forcats::fct_reorder(Variable, rev(row_number()))
+  )
+
+size_use <- 11
+
+p <- ggplot(outcomessub, aes(x = hr, y = Variable, color = cols)) +
+  # Add dot plot and error bars
+  geom_errorbar(aes(xmin = lci, xmax = uci), width = 0.5) +
+  geom_point(size = 1.5) +
+  # Add a reference dashed line at 1
+  geom_vline(xintercept = 1, linetype = "longdash") +
+  scale_color_brewer(palette = "Set1") +
+  theme_classic() +
+  theme(
+    text = element_text(size = 12),
+    legend.position = "none",
+    axis.ticks.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_text(color = "black", hjust = 0, size = size_use),
+    axis.line.y = element_line(colour = "white"),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_x_continuous(trans = "log", breaks = c(0.9, 1, 1.3), limits = c(0.9, 1.3)) +
+  labs(x = "Hazard Ratio (95% CI)") +
+  ggtitle("COPD\n less harmful - more harmful")
+
+t_hr <- ggplot(outcomessub) +
+  geom_text(aes(y = Variable, x = 1, label = hrcip), size = size_use / .pt) +
+  ggtitle("Hazard Ratio\n(95% CI)") +
+  xlab("  ") +
+  theme_classic() +
+  theme(
+    text = element_text(size = 12),
+    axis.line.y = element_blank(),
+    axis.line.x = element_line(color = "white"),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.ticks.x = element_line(color = "white"),
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(color = "white"),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+t_pint <- ggplot(outcomessub) +
+  geom_text(aes(y = Variable, x = 1, label = pint), size = size_use / .pt) +
+  ggtitle("P-value\ninteraction") +
+  xlab("  ") +
+  theme_classic() +
+  theme(
+    text = element_text(size = 12),
+    axis.line.y = element_blank(),
+    axis.line.x = element_line(color = "white"),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.ticks.x = element_line(color = "white"),
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(color = "white"),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+t_ev <- ggplot(outcomessub) +
+  geom_text(aes(y = Variable, x = 1, label = event), size = size_use / .pt) +
+  ggtitle("No. events,\nevents (95% CI)") +
+  xlab("  ") +
+  theme_classic() +
+  theme(
+    text = element_text(size = 12),
+    axis.line.y = element_blank(),
+    axis.line.x = element_line(color = "white"),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.ticks.x = element_line(color = "white"),
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(color = "white"),
+    plot.title = element_text(hjust = 0.5)
+  )
+gridExtra::grid.arrange(p, t_ev, t_hr, t_pint, widths = c(2.2, 1.25, 1, 0.5))
+```

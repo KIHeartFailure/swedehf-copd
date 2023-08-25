@@ -1,0 +1,243 @@
+```{r}
+#| label: predictors
+#| cache: true
+#| cache.comments: false
+
+logreg <- with(imprsdata, glm(formula(paste0("sos_com_copd == 'Yes' ~ ", paste(modvars, collapse = " + "))),
+  family = binomial(link = "logit")
+))
+logregsum <- summary(pool(logreg))
+
+logregout <- tibble(
+  var = as.character(logregsum$term),
+  or = exp(logregsum$estimate),
+  lci = exp(logregsum$estimate - global_z05 * logregsum$std.error),
+  uci = exp(logregsum$estimate + global_z05 * logregsum$std.error),
+  p = fn(logregsum$p.value, dig = 3, p = TRUE),
+  orci = paste0(
+    fn(or, 2), " (",
+    fn(lci, 2), "-",
+    fn(uci, 2), ")"
+  ),
+  cols = factor(case_when(
+    logregsum$p.value >= 0.05 ~ 2,
+    or >= 1 ~ 1,
+    or < 1 ~ 3
+  ))
+) %>%
+  filter(var != "(Intercept)") %>%
+  mutate(
+    var = str_replace_all(var, fixed("Yes"), ""),
+    var = str_replace_all(var, "shf_sos_com_", "sos_com_")
+  )
+
+logregout <- left_join(logregout,
+  metavars %>%
+    select(variable, label),
+  by = c("var" = "variable")
+) %>%
+  mutate(
+    var = coalesce(label, var),
+    var = case_when(
+      var == "shf_indexyear_cat2011-2015" ~ "Year 2011-2015 vs 2005-2010",
+      var == "shf_indexyear_cat2016-2021" ~ "Year 2016-2021 vs 2005-2010",
+      var == "shf_sexMale" ~ "Male vs Female",
+      var == "shf_age_cat>=75" ~ "Age (years) >=75 vs < 75",
+      var == "shf_locationIn-patient" ~ "In-patient vs Out-patient",
+      var == "shf_followuplocation_catHospital" ~ "Follow-up hospital vs Primary care/Other",
+      var == "shf_ef_catHFmrEF" ~ "HFmrEF vs HFrEF",
+      var == "shf_ef_catHFpEF" ~ "HFpEF vs HFrEF",
+      var == "shf_durationhf>6mo" ~ "Duration HF (mo) >=6 vs <6",
+      var == "shf_nyha_catIII-IV" ~ "NYHA class III-IV vs I-II",
+      var == "shf_bmi_cat>=30" ~ "BMI (kg/m²) >=30 vs <30",
+      var == "shf_map_cat>90" ~ "MAP >90 vs <=90",
+      var == "shf_heartrate_cat>70" ~ "Heart rate (beats/min) >70 vs <=70",
+      var == "shf_gfrckdepi_cat<60" ~ "eGFR (mL/min/1.73 m²) <60 vs >=60",
+      var == "shf_potassium_catHyperkalemia" ~ "Hyperkalemia vs Normakalemia",
+      var == "shf_potassium_catHypokalemia" ~ "Hypokalemia vs Normakalemia",
+      var == "shf_ntprobnp_catAbove median within EF" ~ "NT-proBNP (pg/ml) >=median vs <median",
+      var == "shf_device_catCRT/ICD" ~ "CRT/ICD",
+      var == "scb_famtypeLiving alone" ~ "Living alone vs Cohabitating",
+      var == "scb_educationSecondary school" ~ "Secondary vs Compulsory school",
+      var == "scb_educationUniversity" ~ "University vs Compulsory school",
+      var == "scb_dispincome_catAbove median within year" ~ "Income >=median vs <median",
+      TRUE ~ var
+    ),
+    var = str_replace_all(var, ">=", "\u2265"),
+    var = str_replace_all(var, "<=", "\u2264"),
+    var2 = forcats::fct_reorder(var, or)
+  )
+```
+
+```{r}
+#| label: fig-predictors
+#| cache: true
+#| cache.comments: false
+#| dependson: predictors
+#| fig-cap: "Independent predictors of COPD"
+#| fig-width: 6
+#| fig-height: 10
+
+size_use <- 10
+
+p <- ggplot(logregout, aes(x = or, y = var2, color = cols)) +
+  # Add dot plot and error bars
+  geom_errorbar(aes(xmin = lci, xmax = uci), width = 0.2) +
+  geom_point(size = 1) +
+  # Add a reference dashed line at 1
+  geom_vline(xintercept = 1, linetype = "longdash") +
+  scale_color_brewer(palette = "Set1") +
+  theme_classic() +
+  theme(
+    text = element_text(size = 11),
+    legend.position = "none",
+    axis.ticks.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_text(color = "black", size = size_use),
+    axis.line.y = element_line(colour = "white"),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  # scale_y_discrete(expand(0, 1)) +
+  scale_x_continuous(trans = "log", breaks = c(0.7, 1, 3), limits = c(0.7, 3)) +
+  labs(x = "Odds Ratio (95% CI)") +
+  ggtitle("COPD \nless likely - more likely")
+# geom_hline(yintercept = nrow(logregout) + 0.75, linewidth=0.5)
+
+t <- ggplot(logregout) +
+  geom_text(aes(y = var2, x = 1, label = orci), size = size_use / .pt) +
+  # Add a line above graph
+  # geom_hline(yintercept=4.6, size=2) +
+  ggtitle("Odds Ratio\n(95% CI)") +
+  xlab("  ") +
+  theme_classic() +
+  theme(
+    text = element_text(size = 11),
+    axis.line.y = element_blank(),
+    axis.line.x = element_line(color = "white"),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.ticks.x = element_line(color = "white"),
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(color = "white"),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+gridExtra::grid.arrange(p, t, widths = c(4, 1))
+```
+
+```{r}
+#| label: predictors-ef
+#| cache: true
+#| cache.comments: false
+
+levsef <- levels(rsdata %>% pull(shf_ef_cat))
+modvars2 <- modvars[!modvars %in% c("shf_ef_cat")]
+for (i in seq_along(modvars2)) {
+  for (j in seq_along(levsef)) {
+    modvars3 <- modvars2[!modvars2 %in% c(modvars2[i])]
+    levs <- levels(rsdata %>% pull(!!sym(modvars2[i])))
+    nlevs <- length(levs)
+    logreg <- with(imprsdata, glm(
+      formula(paste0(
+        "sos_com_copd == 'Yes' ~ ", modvars2[i], " * relevel(shf_ef_cat, ref = '",
+        levsef[j], "') + ",
+        paste(modvars3, collapse = " + ")
+      )),
+      family = binomial(link = "logit")
+    ))
+    logregsum <- summary(pool(logreg))
+
+    if (j == 3) {
+      logreg_noint <- with(imprsdata, glm(
+        formula(paste0(
+          "sos_com_copd == 'Yes' ~ ", modvars2[i], " + relevel(shf_ef_cat, ref = '",
+          levsef[j], "') + ",
+          paste(modvars3, collapse = " + ")
+        )),
+        family = binomial(link = "logit")
+      ))
+
+      # and compare
+      pint <- mice::D1(logreg, logreg_noint)
+      pint <- fn(pint$result[, "P(>F)"], p = T, dig = 3)
+    } else {
+      pint <- NA
+    }
+    if (nlevs == 2) {
+      tmp <- tibble(
+        var = modvars2[i],
+        lev = paste0(levs[2:nlevs], " vs ", levs[1]),
+        or = exp(logregsum$estimate[2:nlevs]),
+        lci = exp(logregsum$estimate[2:nlevs] - global_z05 * logregsum$std.error[2:nlevs]),
+        uci = exp(logregsum$estimate[2:nlevs] + global_z05 * logregsum$std.error[2:nlevs]),
+        p = fn(logregsum$p.value[2:nlevs], dig = 3, p = TRUE),
+        ef = levsef[j],
+        pint = pint
+      )
+    } else {
+      tmp <- tibble(
+        var = c(modvars2[i], rep(NA, nlevs - 1)),
+        lev = c(NA, paste0(levs[2:nlevs], " vs ", levs[1])),
+        or = c(NA, exp(logregsum$estimate[2:nlevs])),
+        lci = c(NA, exp(logregsum$estimate[2:nlevs] - global_z05 * logregsum$std.error[2:nlevs])),
+        uci = c(NA, exp(logregsum$estimate[2:nlevs] + global_z05 * logregsum$std.error[2:nlevs])),
+        p = c(NA, fn(logregsum$p.value[2:nlevs], dig = 3, p = TRUE)),
+        ef = levsef[j],
+        pint = c(pint, rep(NA, nlevs - 1))
+      )
+    }
+
+    if (i == 1 & j == 1) {
+      logregoutef <<- tmp
+    } else {
+      logregoutef <<- bind_rows(logregoutef, tmp)
+    }
+  }
+}
+
+logregoutef <- logregoutef %>%
+  mutate(
+    var_tmp = var,
+    var_tmp = str_replace_all(var_tmp, "(_cat2|_cat)", ""),
+    # if shf/sos combination  will still get org label
+    var_tmp = str_replace_all(var_tmp, "shf_sos_com_", "sos_com_")
+  )
+
+logregoutef <- left_join(logregoutef,
+  metavars %>%
+    select(variable, label, unit),
+  by = c("var_tmp" = "variable")
+) %>%
+  mutate(
+    Variable = coalesce(label, var_tmp),
+    Variable = if_else(!is.na(unit),
+      paste0(Variable, " (", unit, ")"),
+      Variable
+    ),
+    # small fixes
+    Variable = str_replace_all(Variable, fixed("Disposable income (100 SEK)"), "Income"),
+    orcip = if_else(!is.na(or), paste0(
+      fn(or, 2), " (",
+      fn(lci, 2), "-",
+      fn(uci, 2), "), ",
+      p
+    ), NA)
+  )
+
+logregoutef <- bind_cols(
+  logregoutef %>% filter(ef == "HFrEF") %>% select(Variable, lev, orcip),
+  logregoutef %>% filter(ef == "HFmrEF") %>% select(orcip),
+  logregoutef %>% filter(ef == "HFpEF") %>% select(orcip, pint)
+)
+
+cn <- c("Variable", "Level", "HFrEF", "HFmrEF", "HFpEF", "p-value\ninteraction")
+
+make_one_xlsxsheet(logregoutef, colnames = cn)
+
+default_kable(logregoutef,
+  scale_down = TRUE,
+  escape = TRUE,
+  col.names = cn
+) %>%
+  add_header_above(c(" ", " ", "OR (95% CI), p-value" = 3, ""))
+```
