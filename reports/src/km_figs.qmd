@@ -44,10 +44,8 @@ kmfunc <- function(cox, time, event, eventname, xvar, data, rep = FALSE, endfoll
     filter(time == 2 * 365)
 
   p <- ggplot(plot_data, aes(x = time / 365.25, y = 1 - estimate, color = strata)) +
-    geom_step(aes(linetype = strata), linewidth = 1) +
+    geom_line(aes(linetype = strata), linewidth = 1) +
     scale_color_brewer(palette = "Set1") +
-    # scale_x_continuous(breaks = seq(0, endfollow, 1), limits = c(0, endfollow), expand = c(0, 0)) +
-    # scale_y_continuous(labels = scales::label_percent(suffix = ""), limits = c(0, 1), expand = c(0, 0)) +
     scale_x_continuous(breaks = seq(0, endfollow, 1), limits = c(0, endfollow)) +
     scale_y_continuous(labels = scales::label_percent(suffix = ""), limits = c(0, 1)) +
     theme_classic() +
@@ -69,11 +67,8 @@ kmfunc <- function(cox, time, event, eventname, xvar, data, rep = FALSE, endfoll
       time %in% c(seq(0, endfollow, 1) * 365)
     )
 
-
   t <- ggplot(table_data, aes(y = strata, x = time / 365)) +
     geom_text(aes(label = n.risk), size = 6) +
-    # scale_x_continuous(breaks = seq(0, endfollow, 1), limits = c(0, endfollow), expand = c(0, 0)) +
-    # scale_y_discrete(expand = c(0, 0)) +
     scale_x_continuous(breaks = seq(0, endfollow, 1), limits = c(0, endfollow)) +
     coord_cartesian(xlim = c(0, endfollow), clip = "off") +
     labs(subtitle = "No. at risk") +
@@ -84,15 +79,8 @@ kmfunc <- function(cox, time, event, eventname, xvar, data, rep = FALSE, endfoll
       axis.text.x = element_blank(),
       axis.ticks = element_blank(),
       axis.title = element_blank(),
-      # plot.margin = unit(c(0, 1, 0, 3), "cm"), # trouble
-      # axis.text.y = element_blank()
-      # axis.text.y = element_text(margin = margin(0, 0, 0, 100))
       axis.text.y = element_text(hjust = 0, colour = "black")
     )
-  #  annotation_custom(grid::textGrob("No COPD", rot = 0),
-  #               xmin = -0.5, xmax = -2.5, ymin = 1)
-  # annotation_custom(grid::textGrob("COPD", rot = 0),
-  #                 xmin = 1, xmax = -0.6, ymin = 5)
 
   km <- (p / t) + plot_layout(height = c(1, .25))
   km
@@ -100,11 +88,11 @@ kmfunc <- function(cox, time, event, eventname, xvar, data, rep = FALSE, endfoll
 ```
 
 ```{r}
-#| label: km-all
+#| label: fig-km-all
 #| cache: true
 #| cache.comments: false
 #| dependson: kmfunc, tbl-outcomes
-#| fig-cap: "Cumulative incidence curve for composite CVD/HFH"
+#| fig-cap: "Cumulative incidence curve for CVD/first HFH"
 #| fig-width: 10
 #| fig-height: 6
 
@@ -122,11 +110,11 @@ kmfunc(
 ```
 
 ```{r}
-#| label: km-ref
+#| label: fig-km-ref
 #| cache: true
 #| cache.comments: false
 #| dependson: kmfunc, fig-outcomes-subgrups, outcomessubfunc
-#| fig-cap: "Cumulative incidence curve for composite CVD/HFH - HFrEF"
+#| fig-cap: "Cumulative incidence curve for CVD/first HFH - HFrEF"
 #| fig-width: 10
 #| fig-height: 6
 
@@ -154,11 +142,11 @@ kmfunc(
 ```
 
 ```{r}
-#| label: km-mref
+#| label: fig-km-mref
 #| cache: true
 #| cache.comments: false
 #| dependson: kmfunc, fig-outcomes-subgrups, outcomessubfunc
-#| fig-cap: "Cumulative incidence curve for composite CVD/HFH - HFmrEF"
+#| fig-cap: "Cumulative incidence curve for CVD/first HFH - HFmrEF"
 #| fig-width: 10
 #| fig-height: 6
 
@@ -186,11 +174,11 @@ kmfunc(
 ```
 
 ```{r}
-#| label: km-pef
+#| label: fig-km-pef
 #| cache: true
 #| cache.comments: false
 #| dependson: kmfunc, fig-outcomes-subgrups, outcomessubfunc
-#| fig-cap: "Cumulative incidence curve for composite CVD/HFH - HFpEF"
+#| fig-cap: "Cumulative incidence curve for CVD/first HFH - HFpEF"
 #| fig-width: 10
 #| fig-height: 6
 

@@ -31,7 +31,8 @@ rsdata <- create_sosvar(
   noof = TRUE,
   censdate = censdtm,
   valsclass = "num",
-  warnings = FALSE
+  warnings = FALSE,
+  meta_reg = "NPR (in-patient)"
 )
 
 rm(patregrsdata)

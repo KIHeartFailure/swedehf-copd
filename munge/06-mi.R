@@ -5,7 +5,7 @@ rsdata <- rsdata %>% select(-shf_bmiimp, -shf_bmiimp_cat)
 noimpvars <- names(rsdata)[!names(rsdata) %in% modvars]
 
 # Nelson-Aalen estimator
-na <- basehaz(coxph(Surv(sos_outtime_hosphf, sos_out_deathhosphf == "Yes") ~ 1,
+na <- basehaz(coxph(Surv(sos_outtime_hosphf, sos_out_deathcvhosphf == "Yes") ~ 1,
   data = rsdata, method = "breslow"
 ))
 rsdata <- left_join(rsdata, na, by = c("sos_outtime_hosphf" = "time"))
@@ -18,7 +18,7 @@ pred[noimpvars, ] <- 0 # redundant
 
 # change mthod used in imputation to prop odds model
 meth <- ini$method
-meth[c("scb_education", "shf_indexyear_cat")] <- "polr"
+meth[c("scb_education", "shf_indexyear_cat", "shf_ntprobnp_cat", "scb_dispincome_cat")] <- "polr"
 meth[noimpvars] <- ""
 
 ## check no cores

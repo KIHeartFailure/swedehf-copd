@@ -5,8 +5,6 @@ source(here::here("setup/setup.R"))
 # Load data ---------------------------------------------------------------
 
 load(here(datapath, "data/v410/rsdata410.RData"))
-# rsdata410 <- rsdata410 %>% # remove this
-#  sample_n(3000) # remove this
 
 # Munge data --------------------------------------------------------------
 
@@ -30,7 +28,7 @@ save(
     "metavars",
     "flow",
     "modvars",
-    "tabvars", 
+    "tabvars",
     "stratavars"
   )
 )

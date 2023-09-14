@@ -6,8 +6,8 @@ flow <- rbind(c("General inclusion/exclusion criteria", ""), flow)
 flow <- rbind(flow, c("Project specific inclusion/exclusion criteria", ""))
 
 rsdata <- rsdata410 %>%
-  filter(shf_indexdtm >= ymd("2005-12-01"))
-flow <- rbind(flow, c("Remove posts with index date < 2005-12-01 (PDR from I July 2005)", nrow(rsdata)))
+  filter(shf_indexdtm >= ymd("2005-11-01"))
+flow <- rbind(flow, c("Remove posts with index date < 2005-11-01 (PDR from I July 2005)", nrow(rsdata)))
 
 rsdata <- rsdata %>%
   filter(!is.na(shf_ef_cat))

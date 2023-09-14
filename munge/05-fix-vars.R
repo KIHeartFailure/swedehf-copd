@@ -11,8 +11,8 @@ rsdata <- rsdata %>%
     sos_com_copd2 = factor(
       case_when(
         sos_com_copd == "No" ~ 1,
-        sos_com_nohospcopd12mo <= 1 ~ 2,
-        TRUE ~ 3
+        sos_com_nohospcopd12mo >= 1 ~ 3,
+        TRUE ~ 2
       ),
       levels = 1:3,
       labels = c("No COPD", "COPD without hospitalization", "COPD >=1 hospitalization")
@@ -31,11 +31,12 @@ rsdata <- rsdata %>%
 # income
 
 inc <- rsdata %>%
-  group_by(shf_indexyear) %>%
-  summarise(incmed = quantile(scb_dispincome,
-    probs = 0.5,
+  reframe(incsum = list(enframe(quantile(scb_dispincome,
+    probs = c(0.33, 0.66),
     na.rm = TRUE
-  ), .groups = "drop_last")
+  ))), .by = shf_indexyear) %>%
+  unnest(cols = c(incsum)) %>%
+  pivot_wider(names_from = name, values_from = value)
 
 rsdata <- left_join(
   rsdata,
@@ -43,45 +44,45 @@ rsdata <- left_join(
   by = "shf_indexyear"
 ) %>%
   mutate(
-    scb_dispincome_cat = case_when(
-      scb_dispincome < incmed ~ 1,
-      scb_dispincome >= incmed ~ 2
-    ),
-    scb_dispincome_cat = factor(scb_dispincome_cat,
-      levels = 1:2,
-      labels = c("Below median within year", "Above median within year")
+    scb_dispincome_cat = factor(
+      case_when(
+        scb_dispincome < `33%` ~ 1,
+        scb_dispincome < `66%` ~ 2,
+        scb_dispincome >= `66%` ~ 3
+      ),
+      levels = 1:3,
+      labels = c("1st tertile within year", "2nd tertile within year", "3rd tertile within year")
     )
   ) %>%
-  select(-incmed)
+  select(-`33%`, -`66%`)
 
 # ntprobnp
 
-ntprobnp <- rsdata %>%
-  group_by(shf_ef_cat) %>%
-  summarise(
-    ntmed = quantile(shf_ntprobnp,
-      probs = 0.5,
-      na.rm = TRUE
-    ),
-    .groups = "drop_last"
-  )
+nt <- rsdata %>%
+  reframe(ntmed = list(enframe(quantile(shf_ntprobnp,
+    probs = c(0.33, 0.66),
+    na.rm = TRUE
+  ))), .by = shf_ef_cat) %>%
+  unnest(cols = c(ntmed)) %>%
+  pivot_wider(names_from = name, values_from = value)
 
 rsdata <- left_join(
   rsdata,
-  ntprobnp,
+  nt,
   by = c("shf_ef_cat")
 ) %>%
   mutate(
-    shf_ntprobnp_cat = case_when(
-      shf_ntprobnp < ntmed ~ 1,
-      shf_ntprobnp >= ntmed ~ 2
-    ),
-    shf_ntprobnp_cat = factor(shf_ntprobnp_cat,
-      levels = 1:2,
-      labels = c("Below median within EF", "Above median within EF")
+    shf_ntprobnp_cat = factor(
+      case_when(
+        shf_ntprobnp < `33%` ~ 1,
+        shf_ntprobnp < `66%` ~ 2,
+        shf_ntprobnp >= `66%` ~ 3
+      ),
+      levels = 1:3,
+      labels = c("1st tertile within EF", "2nd tertile within EF", "3rd tertile within EF")
     )
   ) %>%
-  select(-ntmed)
+  select(-`33%`, -`66%`)
 
 ## Create numeric variables needed for comp risk model
 rsdata <- create_crvar(rsdata, "sos_com_copd")

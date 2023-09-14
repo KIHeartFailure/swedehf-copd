@@ -17,7 +17,8 @@ logregout <- tibble(
   orci = paste0(
     fn(or, 2), " (",
     fn(lci, 2), "-",
-    fn(uci, 2), ")"
+    fn(uci, 2), "), ",
+    p
   ),
   cols = factor(case_when(
     logregsum$p.value >= 0.05 ~ 2,
@@ -55,12 +56,14 @@ logregout <- left_join(logregout,
       var == "shf_gfrckdepi_cat<60" ~ "eGFR (mL/min/1.73 m²) <60 vs >=60",
       var == "shf_potassium_catHyperkalemia" ~ "Hyperkalemia vs Normakalemia",
       var == "shf_potassium_catHypokalemia" ~ "Hypokalemia vs Normakalemia",
-      var == "shf_ntprobnp_catAbove median within EF" ~ "NT-proBNP (pg/ml) >=median vs <median",
+      var == "shf_ntprobnp_cat3rd tertile within EF" ~ "NT-proBNP (pg/ml) 3rd tertile vs 1st tertile",
+      var == "shf_ntprobnp_cat2nd tertile within EF" ~ "NT-proBNP (pg/ml) 2nd tertile vs 1st tertile",
       var == "shf_device_catCRT/ICD" ~ "CRT/ICD",
       var == "scb_famtypeLiving alone" ~ "Living alone vs Cohabitating",
       var == "scb_educationSecondary school" ~ "Secondary vs Compulsory school",
       var == "scb_educationUniversity" ~ "University vs Compulsory school",
-      var == "scb_dispincome_catAbove median within year" ~ "Income >=median vs <median",
+      var == "scb_dispincome_cat3rd tertile within year" ~ "Income 3rd tertile vs 1st tertile",
+      var == "scb_dispincome_cat2nd tertile within year" ~ "Income 2nd tertile vs 1st tertile",
       TRUE ~ var
     ),
     var = str_replace_all(var, ">=", "\u2265"),
@@ -74,8 +77,8 @@ logregout <- left_join(logregout,
 #| cache: true
 #| cache.comments: false
 #| dependson: predictors
-#| fig-cap: "Independent predictors of COPD"
-#| fig-width: 6
+#| fig-cap: "Independent associations between baseline characteristics and COPD"
+#| fig-width: 7
 #| fig-height: 10
 
 size_use <- 10
@@ -122,13 +125,14 @@ t <- ggplot(logregout) +
     plot.title = element_text(hjust = 0.5)
   )
 
-gridExtra::grid.arrange(p, t, widths = c(4, 1))
+gridExtra::grid.arrange(p, t, widths = c(4, 1.3))
 ```
 
 ```{r}
 #| label: predictors-ef
 #| cache: true
 #| cache.comments: false
+#| tbl-cap: "Independent associations between baseline characteristics and COPD by EF"
 
 levsef <- levels(rsdata %>% pull(shf_ef_cat))
 modvars2 <- modvars[!modvars %in% c("shf_ef_cat")]
@@ -230,7 +234,7 @@ logregoutef <- bind_cols(
   logregoutef %>% filter(ef == "HFpEF") %>% select(orcip, pint)
 )
 
-cn <- c("Variable", "Level", "HFrEF", "HFmrEF", "HFpEF", "p-value\ninteraction")
+cn <- c("", "", "HFrEF", "HFmrEF", "HFpEF", "p-value\ninteraction")
 
 make_one_xlsxsheet(logregoutef, colnames = cn)
 

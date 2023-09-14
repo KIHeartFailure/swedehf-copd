@@ -114,15 +114,15 @@ outcomesfunc <- function(time, event, eventname, xvar, rep = FALSE, fg = FALSE) 
       # modvars_crr2 <- c(vars_crr[str_detect(vars_crr, paste0(xvar, "_cr_"))], modvars_crr)
       # mod <- crr_mids(time, paste0(event, "_cr"), xvars = modvars_crr2, imprsdata)
       # mod <- summary(pool(mod))
-      #
+
       # out[5, 3:(nlevs + 2)] <- c(
-      #   "ref",
-      #   paste0(
-      #     fn(exp(mod$estimate[1:(nlevs - 1)]), dig = 2),
-      #     " (", fn(exp(mod$estimate[1:(nlevs - 1)] - global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2),
-      #     "-", fn(exp(mod$estimate[1:(nlevs - 1)] + global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2), "), ",
-      #     fn(mod$p.value[1:(nlevs - 1)], dig = 3, p = TRUE)
-      #   )
+      #  "ref",
+      #  paste0(
+      #    fn(exp(mod$estimate[1:(nlevs - 1)]), dig = 2),
+      #    " (", fn(exp(mod$estimate[1:(nlevs - 1)] - global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2),
+      #    "-", fn(exp(mod$estimate[1:(nlevs - 1)] + global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2), "), ",
+      #    fn(mod$p.value[1:(nlevs - 1)], dig = 3, p = TRUE)
+      #  )
       # )
     }
   }
@@ -170,7 +170,7 @@ outcomesfunc <- function(time, event, eventname, xvar, rep = FALSE, fg = FALSE) 
 cvdeathhfhosp <- outcomesfunc(
   time = "sos_outtime_hosphf",
   event = "sos_out_deathcvhosphf",
-  eventname = "CVD/First HF hospitalization",
+  eventname = "CVD/first HFH",
   xvar = "sos_com_copd",
   fg = T
 )
@@ -184,27 +184,27 @@ cvdeath <- outcomesfunc(
 hfhosp <- outcomesfunc(
   time = "sos_outtime_hosphf",
   event = "sos_out_hosphf",
-  eventname = "First HF hospitalization",
+  eventname = "First HFH",
   xvar = "sos_com_copd",
   fg = F
 )
 rephfhosp <- outcomesfunc(
   time = "sos_outtime_death",
   event = "sos_out_counthosphf",
-  eventname = "Total HF hospitalization",
+  eventname = "Total HFH",
   xvar = "sos_com_copd",
   rep = TRUE
 )
 death <- outcomesfunc(
   time = "sos_outtime_death",
   event = "sos_out_death",
-  eventname = "All-cause mortality",
+  eventname = "All-cause death",
   xvar = "sos_com_copd"
 )
 noncvdeath <- outcomesfunc(
   time = "sos_outtime_death",
   event = "sos_out_deathnoncv",
-  eventname = "Non-CV mortality",
+  eventname = "Non-CVD",
   xvar = "sos_com_copd",
   fg = F
 )
@@ -232,7 +232,7 @@ default_kable(outall)
 cvdeathhfhosp <- outcomesfunc(
   time = "sos_outtime_hosphf",
   event = "sos_out_deathcvhosphf",
-  eventname = "CVD/First HF hospitalization",
+  eventname = "CVD/first HFH",
   xvar = "sos_com_copd2",
   fg = F
 )
@@ -246,27 +246,27 @@ cvdeath <- outcomesfunc(
 hfhosp <- outcomesfunc(
   time = "sos_outtime_hosphf",
   event = "sos_out_hosphf",
-  eventname = "First HF hospitalization",
+  eventname = "First HFH",
   xvar = "sos_com_copd2",
   fg = F
 )
 rephfhosp <- outcomesfunc(
   time = "sos_outtime_death",
   event = "sos_out_counthosphf",
-  eventname = "Total HF hospitalization",
+  eventname = "Total HFH",
   xvar = "sos_com_copd2",
   rep = TRUE
 )
 death <- outcomesfunc(
   time = "sos_outtime_death",
   event = "sos_out_death",
-  eventname = "All-cause mortality",
+  eventname = "All-cause death",
   xvar = "sos_com_copd2"
 )
 noncvdeath <- outcomesfunc(
   time = "sos_outtime_death",
   event = "sos_out_deathnoncv",
-  eventname = "Non-CV mortality",
+  eventname = "Non-CVD",
   xvar = "sos_com_copd2",
   fg = F
 )

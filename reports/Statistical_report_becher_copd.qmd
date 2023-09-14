@@ -1,6 +1,5 @@
 ---
 title: "Statistical report: Chronic obstructive pulmonary disease (COPD) in SwedeHF"
-subtitle: DRAFT
 date: "`r Sys.Date()`"
 cover: static/ki_logo_vert_rgb.png
 editor: source
@@ -15,8 +14,8 @@ format:
     toc: true
     toc-depth: 3
     toc-title: Contents
-    lof: true
     lot: true
+    lof: true
     cap-location: top
     number-sections: true
     colorlinks: false
@@ -62,9 +61,7 @@ wb <- createWorkbook()
 
 ## Data sources
 
-The Swedish Heart Failure Registry (SwedeHF) linked with national Swedish registries (SHFDB v 4.1.0) through the Swedish PIN number[@pin]. 
-
-SwedeHF is a nationwide health quality and research registry started in 2000, 
+The Swedish Heart Failure Registry (SwedeHF) is a nationwide quality registry started in 2000, 
 that includes in- and out-hospital patients with HF, regardless of EF and previous history of HF[@swedehf]. 
 Around 80 variables are recorded at 
 discharge from hospital or at the outpatient visit, i.e. index date, and 
@@ -73,34 +70,32 @@ Center (Uppsala, Sweden). Up to April 2017 the only inclusion criterion was a
 clinical diagnosis of HF, which was thereafter defined according to the ICD-10 
 codes I50.0, I50.1, I50.9, I42.0, I42.6, I42.7, I25.5, I11.0, I13.0, I13.2. 
 Informed consent is not required, although patients are informed of entry and can opt out. 
-In 2021, 69 of 76 Swedish hospitals enrolled patients in SwedeHF, which had a 32% coverage of the prevalent HF in Sweden[@annualreport]. 
+In 2021, 69 of 76 Swedish hospitals enrolled patients in SwedeHF, which had a 32% coverage of the prevalent HF population in Sweden[@annualreport]. 
 
-- National Patient Register (The National Board of Health and Welfare) for additional comorbidities and the hospitalization outcomes
-- Cause of Death Register (The National Board of Health and Welfare) for outcomes death
-- National Dispensed Drug Register (The National Board of Health and Welfare) for COPD medications
-- LISA[@lisa] and Register of the Total Population (Statistics Sweden) for socio-economic factors
+SwedeHF was linked with national Swedish registries (SHFDB v 4.1.0) through the 
+Swedish personal identity number (PIN)[@pin]: 
 
-## Ethics
-
-The study was approved by the Swedish Ethical Review Authority, dnr 2021-04326. 
+- The National Patient Register (The National Board of Health and Welfare) for 
+additional comorbidities and the hospitalization outcomes
+- The Cause of Death Register (The National Board of Health and Welfare) for outcomes 
+death
+- The National Prescribed Drug Register (The National Board of Health and Welfare) 
+for COPD medications
+- LISA[@lisa] and the Register of the Total Population (Statistics Sweden) for 
+socio-economic factors
 
 ## Acknowledgments
 
 Please include "We thank all staff members at all care units in Sweden for their contribution to the SwedeHF register." 
 in the Acknowledgements of any resulting articles. 
 
-## Inclusion/exclusion criteria
+## Ethics
 
-```{r}
-#| label: flow
-#| tbl-cap: Information for flowchart
-default_kable(flow) %>%
-  row_spec(c(1, 10), bold = T)
-```
+The study was approved by the Swedish Ethical Review Authority, dnr 2021-04326. 
 
 ## Definitions
 
-The definitions for the general dataset, including ICD-10 codes used for outcomes and co-morbidities, are found https://kiheartfailure.github.io/shfdb4/definitions/.
+The definitions for the general dataset, including ICD-10 codes used for outcomes and comorbidities, are found https://kiheartfailure.github.io/shfdb4/definitions/.
 
 Additional variables created for this project: 
 
@@ -117,87 +112,99 @@ default_kable(metalm) %>%
   column_spec(2, width = "15cm")
 ```
 
+## Inclusion/exclusion criteria
+
+```{r}
+#| label: flow
+#| tbl-cap: Information for flowchart
+default_kable(flow) %>%
+  row_spec(c(1, 10), bold = T)
+```
+
 # Statistical analysis 
 
 ## General
 
 All analyses were performed using `r sessionInfo()$R.version$version.string`[@r]. 
 The level of significance is set to 5%, two-sided. No adjustment for multiple 
-comparisons were made and therefore the results should be viewed with some care.
+comparisons were made and therefore the results should be viewed with care.
 
 ## Missing data
 
 Missing data was imputed with multiple imputation (n = 10) using mice[@mice]. 
 Variables included in the model are indicated in 
-@tbl-base. The primary outcome, all-cause mortality/first HF hospitalization, was included as the Nelson-Aalen estimator.
+@tbl-base. The primary outcome was included as the Nelson-Aalen estimator.
 
 ## COPD
 
-Presentations will be by: 
+Presentations are by: 
 
-1) No COPD/COPD.
+1) No COPD/COPD
 
-2) No COPD/COPD without COPD-associated hospitalisations in the previous 12 months/COPD with $\ge$ 1 COPD-associated hospitalisations in the previous 12 months. 
+2) No COPD/COPD without COPD-associated hospitalisations in the previous 12 
+months/COPD with $\geq$ 1 COPD-associated hospitalisations in the previous 12 months 
 
-Where the 2 group presentation is considered to be primary. 
+where 1) is considered to be primary. 
 
 ## EF subgroups 
 
-Presentations will, were applicable, be by EF subgroups. 
+Presentations will, were applicable, be by EF subgroups, HFrEF (LVEF <40%), 
+HFrEF (LVEF 40-49%) and HFpEF (LVEF $\geq$ 50%).
 
 ## Baseline characteristics
 
 Baseline characteristics are presented by COPD 
-were categorical variables are presented with n and percentage and tested between groups with the chi-square test. 
-Continuous variables are presented with median (q1-q3) and tested for differences between groups with the Kruskal-Wallis test. 
+were categorical variables are presented with n and percentage and tested for 
+differences between groups with the chi-square test. 
+Continuous variables are presented with median [first quartile-third quartile] and tested for 
+differences between groups with the Kruskal-Wallis test. 
 
-## Association between predictors and COPD
+## Independent associations between baseline characteristics and COPD
 
-The association between predictors and COPD was evaluated using a multivariable logistic regression 
-including the variables shown in @fig-predictors. 
+The association between baseline characteristics and COPD was evaluated using a multivariable logistic regression 
+including the variables shown in @fig-predictors. The variables were selected based on clinical relevance. 
 
-Subgroup analyses within each EF was performed including an interaction between EF and the respective variable. 
+Subgroup analyses for each EF category was performed including an interaction between EF and the respective variable. 
 Note that this causes the estimates to be from different multivariable models.  
 
 ### Assumptions
 
 Possible outliers were evaluated using Cook's distance and multicollinearity was 
-evaluated using the Variance Inflation Factor (VIF). 
+evaluated using the Variance Inflation Factor (VIF) without any problems being detected. 
 
 ## Association between COPD and outcomes
 
 The following outcomes are considered: 
 
-- CV mortality + first HF hospitalization (primary endpoint)
-- CV mortality
-- First HF hospitalization
-- Total HF hospitalization
-- All-cause mortality
-- Non-CV mortality
+- CV death (CVD) + first HF hospitalization (HFH) (primary outcome)
+- CVD
+- First HFH
+- Total HFH
+- All-cause death
+- Non-CVD
 
-Time to first events were presented with cumulative incidence curves for the primary endpoint. 
+The primary outcome was presented with cumulative incidence curves. 
 
-Cox proportional hazards regressions were used to model the time to first event. 
+Crude and adjusted analyses were performed were adjustment was performed 
+for variables indicated in @tbl-base. 
 
-As a consistency analysis the time to first events for the primary outcome was
-modelled using a sub-distributional hazards model[@fg] 
-where death (other than CVD) was treated as a competing event. 
+Cox proportional hazards regression was used to model the time to first event outcomes. 
+As a consistency analysis a sub-distributional hazards model[@fg] 
+where death (other than CVD) was treated as a competing event was estimated for the primary outcome. 
 
-Recurrent events were model using a negative binomial regression including the log of time as an offset in the model. 
+Recurrent events (total HFH) was model using a negative binomial regression including the log of time as an offset in the model. 
 
 Data were censored at 5 years follow-up, 2021-12-31, emigration from Sweden or, when it was itself not an event, death. 
-
-Crude and adjusted analyses were performed were adjustment was for variables indicated in @tbl-base. 
 
 ### Association between COPD and outcomes - Subgroups
 
 Associations across pre-specified subgroups were evaluated using an interaction term between COPD and the 
-respective variable for the outcome All-cause mortality/first HF hospitalization (primary outcome) and presented in a Forest plot. 
+respective variable for the primary outcome and presented in a Forest plot. 
 
 ### Assumptions
 
 The proportional hazards assumption was investigated using the scaled Schoenfeld 
-residuals (cox.zph in[@survival-package]) for the primary outcome leading to 
+residuals for the primary outcome leading to 
 that location and age were stratified for in the models. 
 Possible outliers were visually inspected by plotting the dfbetas. 
 
@@ -206,27 +213,27 @@ Possible outliers were visually inspected by plotting the dfbetas.
 ```{r}
 med <- rsdata %>%
   summarise(
-    med = fn(median(shf_age), dig = 1),
-    q1 = fn(quantile(shf_age, probs = 0.25), dig = 1),
-    q3 = fn(quantile(shf_age, probs = 0.75), dig = 1)
+    med = fn(median(shf_age), dig = 0),
+    q1 = fn(quantile(shf_age, probs = 0.25), dig = 0),
+    q3 = fn(quantile(shf_age, probs = 0.75), dig = 0)
   ) %>%
   mutate(out = paste0(med, " (", q1, "-", q3, ")")) %>%
   pull(out)
 
 percfem <- rsdata %>%
   count(shf_sex) %>%
-  mutate(perc = fn(n / sum(n) * 100, 1)) %>%
+  mutate(perc = fn(n / sum(n) * 100, 0)) %>%
   filter(shf_sex == "Female") %>%
   pull(perc)
 ```
 
-The median age (IQR) is `r med` and `r percfem`% females.    
+The median (q1-q3) age is `r med` and `r percfem`% females.    
 
 ## Baseline characteristics
 
-{{< include src/base_table.qmd >}}
+{{< include src/base_tab.qmd >}}
 
-## Association between predictors and COPD
+## Independent associations between baseline characteristics and COPD
 
 {{< include src/predictors.qmd >}}
 
@@ -257,7 +264,6 @@ The median (min-max) follow-up is
 {{< include src/km_figs.qmd >}}
 
 \clearpage
-\newpage
 
 # Reproducibility
 

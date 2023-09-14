@@ -19,7 +19,7 @@ lmsel <- left_join(
   by = "lopnr"
 ) %>%
   mutate(diff = as.numeric(EDATUM - shf_indexdtm)) %>%
-  filter(diff >= -30.5 * 5, diff <= 14) %>%
+  filter(diff >= -120, diff <= 14) %>%
   select(lopnr, shf_indexdtm, EDATUM, ATC)
 
 rsdata <- create_medvar(
@@ -28,7 +28,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rsdata <- create_medvar(
@@ -37,7 +39,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rsdata <- create_medvar(
@@ -46,7 +50,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rsdata <- create_medvar(
@@ -55,7 +61,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rsdata <- create_medvar(
@@ -64,7 +72,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rsdata <- create_medvar(
@@ -73,7 +83,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rsdata <- create_medvar(
@@ -82,7 +94,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rsdata <- create_medvar(
@@ -91,7 +105,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rsdata <- create_medvar(
@@ -100,7 +116,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rsdata <- create_medvar(
@@ -110,7 +128,9 @@ rsdata <- create_medvar(
   meddata = lmsel,
   id = "lopnr",
   valsclass = "fac",
-  indexdate = shf_indexdtm
+  fromdate = ymd("2005-11-01"),
+  indexdate = shf_indexdtm,
+  metatime = "-120-14days"
 )
 
 rm(lmsel)

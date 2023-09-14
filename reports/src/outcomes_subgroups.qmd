@@ -80,7 +80,7 @@ outcomessub <- bind_rows(outcomessub, outcomessubfunc(intvar = "shf_location"))
 #| cache: true
 #| cache.comments: false
 #| dependson: outcomessubfunc
-#| fig-cap: "Association between COPD and outcomes by subgroups"
+#| fig-cap: "Association between COPD and CVD/first HFH by subgroups"
 #| fig-width: 10
 #| fig-height: 6
 outcomessub <- outcomessub %>%
@@ -140,7 +140,7 @@ p <- ggplot(outcomessub, aes(x = hr, y = Variable, color = cols)) +
     axis.line.y = element_line(colour = "white"),
     plot.title = element_text(hjust = 0.5)
   ) +
-  scale_x_continuous(trans = "log", breaks = c(0.9, 1, 1.3), limits = c(0.9, 1.3)) +
+  scale_x_continuous(trans = "log", breaks = c(0.9, 1, 1.2, 1.4), limits = c(0.9, 1.4)) +
   labs(x = "Hazard Ratio (95% CI)") +
   ggtitle("COPD\n less harmful - more harmful")
 
@@ -194,5 +194,5 @@ t_ev <- ggplot(outcomessub) +
     axis.text.x = element_text(color = "white"),
     plot.title = element_text(hjust = 0.5)
   )
-gridExtra::grid.arrange(p, t_ev, t_hr, t_pint, widths = c(2.2, 1.25, 1, 0.5))
+gridExtra::grid.arrange(p, t_ev, t_hr, t_pint, widths = c(2.2, 1.3, 0.9, 0.5))
 ```
