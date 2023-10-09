@@ -110,20 +110,20 @@ outcomesfunc <- function(time, event, eventname, xvar, rep = FALSE, fg = FALSE) 
         )
       )
 
-      # out[5, 2] <- "Adjusted SHR (95% CI), p-value"
-      # modvars_crr2 <- c(vars_crr[str_detect(vars_crr, paste0(xvar, "_cr_"))], modvars_crr)
-      # mod <- crr_mids(time, paste0(event, "_cr"), xvars = modvars_crr2, imprsdata)
-      # mod <- summary(pool(mod))
+      out[5, 2] <- "Adjusted SHR (95% CI), p-value"
+      modvars_crr2 <- c(vars_crr[str_detect(vars_crr, paste0(xvar, "_cr_"))], modvars_crr)
+      mod <- crr_mids(time, paste0(event, "_cr"), xvars = modvars_crr2, imprsdata)
+      mod <- summary(pool(mod))
 
-      # out[5, 3:(nlevs + 2)] <- c(
-      #  "ref",
-      #  paste0(
-      #    fn(exp(mod$estimate[1:(nlevs - 1)]), dig = 2),
-      #    " (", fn(exp(mod$estimate[1:(nlevs - 1)] - global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2),
-      #    "-", fn(exp(mod$estimate[1:(nlevs - 1)] + global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2), "), ",
-      #    fn(mod$p.value[1:(nlevs - 1)], dig = 3, p = TRUE)
-      #  )
-      # )
+      out[5, 3:(nlevs + 2)] <- c(
+        "ref",
+        paste0(
+          fn(exp(mod$estimate[1:(nlevs - 1)]), dig = 2),
+          " (", fn(exp(mod$estimate[1:(nlevs - 1)] - global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2),
+          "-", fn(exp(mod$estimate[1:(nlevs - 1)] + global_z05 * mod$std.error[1:(nlevs - 1)]), dig = 2), "), ",
+          fn(mod$p.value[1:(nlevs - 1)], dig = 3, p = TRUE)
+        )
+      )
     }
   }
 

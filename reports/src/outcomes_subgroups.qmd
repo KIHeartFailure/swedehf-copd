@@ -180,7 +180,7 @@ t_pint <- ggplot(outcomessub) +
 
 t_ev <- ggplot(outcomessub) +
   geom_text(aes(y = Variable, x = 1, label = event), size = size_use / .pt) +
-  ggtitle("No. events,\nevents (95% CI)") +
+  ggtitle("No. events,\nevents/100py (95% CI)") +
   xlab("  ") +
   theme_classic() +
   theme(
