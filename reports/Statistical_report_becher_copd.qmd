@@ -53,8 +53,9 @@ source(here::here("setup/setup.R"))
 # load data
 load(here("data/clean-data/data.RData"))
 
-# create workbook to write tables to Excel
-wb <- createWorkbook()
+# load workbook to write tables to Excel
+wb <- loadWorkbook(here("output/tabs/tables.xlsx"))
+sheets <- names(wb)
 ```           
 
 # Data
@@ -93,25 +94,6 @@ in the Acknowledgements of any resulting articles.
 
 The study was approved by the Swedish Ethical Review Authority, dnr 2021-04326. 
 
-## Definitions
-
-The definitions for the general dataset, including ICD-10 codes used for outcomes and comorbidities, are found https://kiheartfailure.github.io/shfdb4/definitions/.
-
-Additional variables created for this project: 
-
-```{r}
-#| label: npr
-#| tbl-cap: Additional comorbidites from the National Patient Register
-default_kable(metaout)
-```
-
-```{r pdr}
-#| label: pdr
-#| tbl-cap: Additional medications from the National Prescribed Drug Register
-default_kable(metalm) %>%
-  column_spec(2, width = "15cm")
-```
-
 ## Inclusion/exclusion criteria
 
 ```{r}
@@ -120,6 +102,12 @@ default_kable(metalm) %>%
 default_kable(flow) %>%
   row_spec(c(1, 10), bold = T)
 ```
+
+## Definitions
+
+Information on data sources, definitions etc. are found https://kiheartfailure.github.io/shfdb4/.
+
+{{< include src/vars.qmd >}}
 
 # Statistical analysis 
 

@@ -5,6 +5,7 @@ source(here::here("setup/setup.R"))
 # Load data ---------------------------------------------------------------
 
 load(here(datapath, "data/v410/rsdata410.RData"))
+load(here(datapath, "data/v410/meta_statreport.RData"))
 
 # Munge data --------------------------------------------------------------
 
@@ -29,6 +30,20 @@ save(
     "flow",
     "modvars",
     "tabvars",
-    "stratavars"
+    "stratavars",
+    "outvars",
+    "ccimeta",
+    "deathmeta",
+    "outcommeta"
   )
+)
+
+
+# create workbook to write tables to Excel
+wb <- openxlsx::createWorkbook()
+openxlsx::addWorksheet(wb, sheet = "Information")
+openxlsx::writeData(wb, sheet = "Information", x = "Tables in xlsx format for tables in Statistical report: Loop Diuretic Therapy as a Prognostic Enrichment Factor for Clinical Trials in Patients with Heart Failure with mrEF and pEF", rowNames = FALSE, keepNA = FALSE)
+openxlsx::saveWorkbook(wb,
+  file = here::here("output/tabs/tables.xlsx"),
+  overwrite = TRUE
 )

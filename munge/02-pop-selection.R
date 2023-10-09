@@ -1,4 +1,3 @@
-load("C:/Users/Lina/STATISTIK/Projects/20210525_shfdb4/dm/data/rsdata_flow.RData")
 flow <- flow[1:8, ]
 
 flow <- rbind(c("General inclusion/exclusion criteria", ""), flow)

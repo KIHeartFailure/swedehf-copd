@@ -103,6 +103,7 @@ tabvars_not_in_mod <- c(
   "shf_ntprobnp",
   "shf_potassium",
   "shf_bmi",
+  "sos_com_renal",
   "sos_com_charlsonci",
   "sos_com_charlsonci_cat",
   "shf_sglt2",
@@ -122,3 +123,14 @@ tabvars_not_in_mod <- c(
 
 modvars <- tabvars[!(tabvars %in% tabvars_not_in_mod)]
 stratavars <- c("shf_location", "shf_age_cat")
+
+outvars <- tibble(
+  var = c("sos_out_deathcvhosphf", "sos_out_deathcv", "sos_out_hosphf", "sos_out_nohosphf", "sos_out_death", "sos_out_deathnoncv"),
+  time = c("sos_outtime_hosphf", "sos_outtime_death", "sos_outtime_hosphf", "sos_outtime_death", "sos_outtime_death", "sos_outtime_death"),
+  name = c("CVD/First HFH", "CVD", "First HFH", "Total HFH", "All-cause mortality", "Non-CVD"),
+  composite = c(1, 0, 0, 0, 0, 0),
+  rep = c(0, 0, 0, 1, 0, 0),
+  primary = c(1, 0, 0, 0, 0, 0),
+  order = c(1, 2, 3, 4, 5, 6)
+) %>%
+  arrange(order)

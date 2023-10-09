@@ -176,11 +176,7 @@ basetabfunc <- function(data, stratavar, catdig = 0, contdig = contdiguse, novar
   # footnotes
   tab <- tab %>%
     mutate(
-      footnote1s = if_else(!is.na(var) & var %in% modvars, footnote_marker_symbol(1), ""),
-      footnote1n = if_else(!is.na(var) & str_detect(var, "^shf_"), footnote_marker_alphabet(1), ""),
-      footnote2n = if_else(!is.na(var) & str_detect(var, "sos_com_"), footnote_marker_alphabet(2), ""),
-      footnote3n = if_else(!is.na(var) & str_detect(var, "sos_lm_"), footnote_marker_alphabet(3), ""),
-      footnote4n = if_else(!is.na(var) & str_detect(var, "^scb_"), footnote_marker_alphabet(4), "")
+      footnote1 = if_else(!is.na(var) & var %in% modvars, footnote_marker_symbol(1), "")
     ) %>%
     unite(footnote, starts_with("footnote"), sep = "") %>%
     mutate(
@@ -221,12 +217,6 @@ basetabfunc <- function(data, stratavar, catdig = 0, contdig = contdiguse, novar
       ),
       symbol = c(
         "Included in multiple imputation, logistic and cox regression models."
-      ),
-      alphabet = c(
-        "Source: SwedeHF",
-        "Source: The National Patient Register",
-        "Source: The Prescribed Drug Register",
-        "Source: LISA/Register of the Total Population"
       ),
       threeparttable = T
     )

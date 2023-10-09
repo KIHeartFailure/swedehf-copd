@@ -1,0 +1,145 @@
+```{r}
+#| label: tbl-vars
+#| cache: true
+#| cache.comments: false
+#| tbl-cap: "Variable defintions and data sources"
+
+vars <- tibble(var = c("sos_com_copd", tabvars))
+vars <- bind_rows(
+  vars,
+  outvars %>%
+    filter(composite == 0 & rep == 0)
+) %>%
+  mutate(order = 1:n())
+
+vars <- vars %>%
+  mutate(
+    # if recoding or categorizing will still get org label
+    var_tmp = str_replace_all(var, "(_cat2|_cat)", ""),
+    # if shf/sos combination  will still get org label
+    var_tmp = str_replace_all(var_tmp, "shf_sos_com_", "sos_com_")
+  ) %>%
+  group_by(var_tmp) %>%
+  slice(1) %>%
+  ungroup() %>%
+  filter(var != "npip")
+
+vars <- left_join(vars,
+  metavars %>%
+    select(variable, label, unit),
+  by = c("var_tmp" = "variable")
+) %>%
+  mutate(
+    Variable = coalesce(name, label, var_tmp),
+    # small fixes
+    Variable = str_replace_all(Variable, fixed("Disposable income (100 SEK)"), "Income")
+  )
+
+# meta data
+meta <- bind_rows(
+  outcommeta,
+  deathmeta,
+  metalm %>%
+    rename(Code = ATC) %>%
+    mutate(Code = paste0("ATC ", Code))
+)
+vars <- left_join(vars, meta, by = c("var_tmp" = "Variable"))
+
+vars <- vars %>%
+  arrange(order) %>%
+  mutate(
+    order = 1:n(),
+    Code = str_trim(Code),
+    Code = str_replace_all(Code, "ICD", "ICD-10"),
+    Code = if_else(Period == "0-" | str_detect(Code, "428"), str_replace_all(Code, "ICD-10", "ICD-9/10"), Code),
+    Code = str_replace_all(Code, ":", " "),
+    Code = str_replace_all(Code, ",", ", ")
+  )
+
+# data sources and footnotes
+vars <- vars %>%
+  mutate(
+    data1 = if_else(str_detect(var, "^shf_"), "SwedeHF", NA),
+    data2 = case_when(
+      str_detect(var, "sos_com_|hosp") & !is.na(Code) ~ paste0("NPR: ", Code),
+      str_detect(var, "sos_com_|hosp") & is.na(Code) ~ "NPR",
+      str_detect(var, "sos_lm") ~ paste0("NPDR: ", Code)
+    ),
+    data4 = case_when(
+      str_detect(var, "death") & !is.na(Code) ~ paste0("CDR: ", Code),
+      str_detect(var, "death") & is.na(Code) ~ "CDR"
+    ),
+    data5 = if_else(str_detect(var, "scb_famtype|scb_education|scb_dispincome"), "LISA", NA),
+    data6 = if_else(str_detect(var, "scb_child"), "RTP", NA),
+    footnote1 = if_else(str_detect(var, "sos_com") &
+      !Variable %in% c("Charlson Comorbidity Index"),
+    footnote_marker_alphabet(1, format = "latex"), ""
+    ),
+    footnote2 = if_else(str_detect(var, "hosp"), footnote_marker_alphabet(2, format = "latex"), ""),
+    footnote3 = if_else(str_detect(var, "deathcv|deathnoncv"), footnote_marker_alphabet(3, format = "latex"), ""),
+    footnote4 = if_else(str_detect(var, "sos_lm"), footnote_marker_alphabet(4, format = "latex"), ""),
+    footnote5 = if_else(Variable == "Charlson Comorbidity Index", footnote_marker_alphabet(5, format = "latex"), ""),
+  ) %>%
+  unite(datasource, starts_with("data"), sep = "; ", na.rm = TRUE) %>%
+  mutate(
+    datasource = case_when(
+      Variable == "eGFR" ~ "SwedeHF CKD-EPI 2021 (see reference)",
+      Variable == "Anemia" ~ "SwedeHF Female Hb < 120/Male Hb < 130",
+      var == "sos_out_deathnoncv" ~ "CDR: ICD-10 All except I, J81, K761, R570, G45",
+      TRUE ~ datasource
+    ),
+    Variable = if_else(Variable == "Disposable income", "Income", Variable)
+  ) %>%
+  unite(footnote, starts_with("footnote"), sep = "") %>%
+  arrange(order) %>%
+  mutate(datasource = paste0(datasource, footnote)) %>%
+  select(Variable, datasource)
+
+footnotetext <- c(
+  "Derived from diagnoses/operations in all positions, in-patient and out-patient speciality care within 5 years prior to index (ICD-10)/1987 (ICD-9) unless stated otherwise.",
+  "Hospitalizations are derived from diagnoses in main position, in-patient care.",
+  "Cause of death is derived from the underlyaing cause of death.",
+  "Prescriptions derived from 4 months prior to index up untill 14 days after index.",
+  "Derived from diagnoses in all positions, in-patient and out-patient speciality care within 10 years prior to index using ICD-9/10 according to Ludvigsson, 2021 (see reference)"
+)
+
+vars_xls <- vars %>%
+  mutate(
+    datasource = str_remove_all(datasource, "textsuperscript|\\}|\\{"),
+    datasource = str_replace_all(datasource, "\\\\", " ")
+  ) %>%
+  add_row(Variable = "") %>%
+  add_row(Variable = paste0("a ", footnotetext[1])) %>%
+  add_row(Variable = paste0("b ", footnotetext[2])) %>%
+  add_row(Variable = paste0("c ", footnotetext[3])) %>%
+  add_row(Variable = paste0("d ", footnotetext[4])) %>%
+  add_row(Variable = paste0("e ", footnotetext[5]))
+
+make_one_xlsxsheet(vars_xls,
+  colnames = c("Variable", "Data source")
+)
+
+vars <- vars %>%
+  mutate(
+    # so no probs
+    Variable = sanitize_text(Variable)
+  )
+
+default_kable(vars,
+  escape = FALSE,
+  longtable = TRUE,
+  font_size = 6.5,
+  col.names = c("Variable", "Data source")
+) %>%
+  footnote(
+    footnote_order = c("general", "symbol", "alphabet"),
+    general_title = "",
+    general = c(
+      "Abbreviations: SwedeHF, The Swedish Heart Failure Registry; NPR, The National Patient Register; CDR, The Cause of Death Register; NPDR, The National Prescribed Drug Register; LISA, Longitudinal integrated database for health insurance and labour market studies; RTP, Register of the Total Population"
+    ),
+    alphabet = footnotetext,
+    threeparttable = T
+  ) %>%
+  column_spec(2, width = "10cm")
+```
+
