@@ -94,6 +94,8 @@ in the Acknowledgements of any resulting articles.
 
 The study was approved by the Swedish Ethical Review Authority, dnr 2021-04326. 
 
+\clearpage
+
 ## Inclusion/exclusion criteria
 
 ```{r}
