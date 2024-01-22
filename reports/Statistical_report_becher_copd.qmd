@@ -233,10 +233,10 @@ The median (q1-q3) age is `r med` and `r percfem`% females.
 medsurv <- rsdata %>%
   summarise(
     med = fn(median(sos_outtime_death / 365.25 * 12), dig = 1),
-    min = fn(min(sos_outtime_death / 365.25 * 12), dig = 1),
-    max = fn(max(sos_outtime_death / 365.25 * 12), dig = 1)
+    q1 = fn(quantile(sos_outtime_death / 365.25 * 12, probs = 0.25), dig = 1),
+    q3 = fn(quantile(sos_outtime_death / 365.25 * 12, probs = 0.75), dig = 1)
   ) %>%
-  mutate(out = paste0(med, " (", min, "-", max, ")")) %>%
+  mutate(out = paste0(med, " (", q1, "-", q3, ")")) %>%
   pull(out)
 
 sumsurv <- rsdata %>%
@@ -244,7 +244,7 @@ sumsurv <- rsdata %>%
   pull(sumpy)
 ```
 
-The median (min-max) follow-up is 
+The median (q1-q3) follow-up is 
 `r medsurv` months for a total of `r sumsurv` patient-years of follow-up.
 
 {{< include src/outcomes.qmd >}}
