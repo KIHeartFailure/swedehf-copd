@@ -249,7 +249,13 @@ The median (min-max) follow-up is
 
 {{< include src/outcomes.qmd >}}
 
+\clearpage
+
 {{< include src/outcomes_subgroups.qmd >}}
+
+{{< include src/outcomes_subgroups_ef.qmd >}}
+
+\clearpage
 
 {{< include src/km_figs.qmd >}}
 

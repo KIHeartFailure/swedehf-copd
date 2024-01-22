@@ -1,0 +1,243 @@
+```{r}
+#| label: outcomessubeffunc
+#| cache: true
+#| cache.comments: false
+
+coxvars <- modvars
+coxvars[modvars %in% stratavars] <- paste0("strata(", coxvars[modvars %in% stratavars], ")")
+coxvars <- coxvars[!modvars == "shf_ef_cat"]
+modvarstmp <- modvars[!modvars == "shf_ef_cat"]
+
+outcomessubeffunc <- function(time, event, eventname, xvar = "sos_com_copd", intvar = "shf_ef_cat", rep = F) {
+  if (xvar != "sos_com_copd") stop("Incidence and interactions need fix")
+  levs <- levels(rsdata %>% pull(!!sym(xvar)))
+  if (xvar == "sos_com_copd") {
+    levs <- str_replace(levs, "No", "No COPD")
+    levs <- str_replace(levs, "Yes", "COPD")
+  }
+  nlevs <- length(levs)
+
+  levsint <- levels(rsdata %>% pull(!!sym(intvar)))
+  nlevsint <- length(levsint)
+
+  out <- data.frame(matrix(NA, ncol = 3 + nlevs * nlevsint, nrow = 3))
+  colnames(out) <- c("Outcome", "Model", paste0(rep(levs, times = nlevsint), "_", rep(levsint, each = nlevs)), "pint")
+
+  out[1, 1] <- eventname
+
+  ## incidence rate
+  out[1, 2] <- "No events, sum py, events/100py (95% CI)"
+
+  ## incidence rate
+  if (!rep) {
+    ev <- rsdata %>%
+      group_by(!!sym(intvar), !!sym(xvar)) %>%
+      summarise(
+        ev = sum(!!sym(event) == "Yes"),
+        s = sum(!!sym(time) / 365.25),
+        .groups = "drop"
+      )
+  }
+  if (rep) {
+    ev <- rsdata %>%
+      group_by(!!sym(intvar), !!sym(xvar)) %>%
+      summarise(
+        ev = sum(!!sym(event)),
+        s = sum(!!sym(time) / 365.25),
+        .groups = "drop"
+      )
+  }
+
+  r <- pois.exact(x = ev$ev, pt = ev$s / 100)
+
+  out[1, 3:(ncol(out) - 1)] <- paste0(
+    ev$ev, ", ",
+    fn(r$rate, dig = 0), " (",
+    fn(r$lower, dig = 0), "-",
+    fn(r$upper, dig = 0), ")"
+  )
+
+  for (i in seq_along(levsint)) {
+    if (!rep) {
+      ## 2 row - crude regression
+      out[2, 2] <- "Crude HR (95% CI), p-value"
+      mod <- summary(modraw <- coxph(formula(paste0("Surv(", time, ",", event, "== 'Yes') ~ ", xvar, " * relevel(", intvar, ", ref = '", levsint[i], "')")),
+        data = rsdata
+      ))
+
+      out[2, (1 + i * nlevs):(2 + i * nlevs)] <- c(
+        "ref",
+        paste0(
+          fn(mod$conf.int[1, "exp(coef)"], dig = 2),
+          " (", fn(mod$conf.int[1, "lower .95"], dig = 2),
+          "-", fn(mod$conf.int[1, "upper .95"], dig = 2), "), ",
+          fn(mod$coef[1, "Pr(>|z|)"], dig = 3, p = TRUE)
+        )
+      )
+
+      if (i == 1) {
+        pint <- car::Anova(modraw, type = "3", test.statistic = "Wald")
+        out[2, "pint"] <- fn(last(pint[, "Pr(>Chisq)"]), p = T, dig = 3)
+      }
+
+      ## adjusted regression
+      out[3, 2] <- "Adjusted HR (95% CI), p-value"
+      mod <- with(imprsdata, coxph(formula(paste0(
+        "Surv(", time, ",", event, " == 'Yes') ~ ", xvar, " * relevel(", intvar, ", ref = '", levsint[i], "') +", paste(coxvars, collapse = " + ")
+      ))))
+      smod <- summary(pool(mod))
+
+      out[3, (1 + i * nlevs):(2 + i * nlevs)] <- c(
+        "ref",
+        paste0(
+          fn(exp(smod$estimate[1:(nlevs - 1)]), dig = 2),
+          " (", fn(exp(smod$estimate[1:(nlevs - 1)] - global_z05 * smod$std.error[1:(nlevs - 1)]), dig = 2),
+          "-", fn(exp(smod$estimate[1:(nlevs - 1)] + global_z05 * smod$std.error[1:(nlevs - 1)]), dig = 2), "), ",
+          fn(smod$p.value[1:(nlevs - 1)], dig = 3, p = TRUE)
+        )
+      )
+
+      if (i == 1) {
+        mod_noint <- with(imprsdata, coxph(formula(paste0(
+          "Surv(", time, ",", event, " == 'Yes') ~ ", xvar, " + relevel(", intvar, ", ref = '", levsint[i], "') +", paste(coxvars, collapse = " + ")
+        ))))
+        pint <- mice::D1(mod, mod_noint)
+        out[3, "pint"] <- fn(pint$result[, "P(>F)"], p = T, dig = 3)
+      }
+    }
+    if (rep) {
+      ## 2 row - crude regression
+      out[2, 2] <- "Crude RR (95% CI), p-value"
+      mod <- summary(modraw <- glm.nb(formula(paste0(event, " ~ ", xvar, " * relevel(", intvar, ", ref = '", levsint[i], "') + offset(log(sos_outtime_death))")),
+        data = rsdata %>% filter(sos_outtime_death > 0)
+      ))
+
+      out[2, (1 + i * nlevs):(2 + i * nlevs)] <- c(
+        "ref",
+        paste0(
+          fn(exp(mod$coefficients[2:nlevs, 1]), dig = 2),
+          " (", fn(exp(mod$coefficients[2:nlevs, 1] - global_z05 * mod$coefficients[2:nlevs, 2]), dig = 2),
+          "-", fn(exp(mod$coefficients[2:nlevs, 1] + global_z05 * mod$coefficients[2:nlevs, 2]), dig = 2), "), ",
+          fn(mod$coefficients[2:nlevs, 4], dig = 3, p = TRUE)
+        )
+      )
+
+      if (i == 1) {
+        mod <- summary(modraw <- glm.nb(formula(paste0(event, " ~ ", xvar, " * shf_sex + offset(log(sos_outtime_death))")),
+          data = rsdata %>% filter(sos_outtime_death > 0)
+        ))
+
+        pint <- car::Anova(modraw, type = "3", test.statistic = "Wald")
+        out[2, "pint"] <- fn(last(pint[, "Pr(>Chisq)"]), p = T, dig = 3)
+      }
+
+      ## 3 row - adjusted regression
+      imprsdata0 <- mice::filter(imprsdata, rsdata %>% pull(sos_outtime_death) > 0)
+      mod <- with(imprsdata0, glm.nb(formula(paste0(
+        event, " ~ ", xvar, " * relevel(", intvar, ", ref = '", levsint[i], "') + offset(log(sos_outtime_death)) + ",
+        paste0(modvarstmp, collapse = " + ")
+      ))))
+      smod <- summary(pool(mod))
+      out[3, 2] <- "Adjusted RR (95% CI), p-value"
+      out[3, (1 + i * nlevs):(2 + i * nlevs)] <- c(
+        "ref",
+        paste0(
+          fn(exp(smod$estimate[2:nlevs]), dig = 2),
+          " (", fn(exp(smod$estimate[2:nlevs] - global_z05 * smod$std.error[2:nlevs]), dig = 2),
+          "-", fn(exp(smod$estimate[2:nlevs] + global_z05 * smod$std.error[2:nlevs]), dig = 2), "), ",
+          fn(smod$p.value[2:nlevs], dig = 3, p = TRUE)
+        )
+      )
+
+      if (i == 1) {
+        pint <- with(imprsdata0, car::Anova(
+          glm.nb(formula(paste0(
+            event, " ~ ", xvar, " * relevel(", intvar, ", ref = '", levsint[i], "') + offset(log(sos_outtime_death)) + ",
+            paste0(modvarstmp, collapse = " + ")
+          ))),
+          type = 3, test.statistic = "Wald"
+        ))
+
+        nc <- length(pint$analyses[[1]]$`Chisq`)
+
+        chis2 <- c(
+          pint$analyses[[1]]$`Chisq`[nc],
+          pint$analyses[[2]]$`Chisq`[nc],
+          pint$analyses[[3]]$`Chisq`[nc],
+          pint$analyses[[4]]$`Chisq`[nc],
+          pint$analyses[[5]]$`Chisq`[nc],
+          pint$analyses[[6]]$`Chisq`[nc],
+          pint$analyses[[7]]$`Chisq`[nc],
+          pint$analyses[[8]]$`Chisq`[nc],
+          pint$analyses[[9]]$`Chisq`[nc],
+          pint$analyses[[10]]$`Chisq`[nc]
+        )
+
+        pintp <- miceadds::micombine.chisquare(
+          dk = chis2, df = pint$analyses[[1]]$Df[nc], display = FALSE
+        )
+
+        out[3, "pint"] <- fn(pintp[["p"]], p = T, dig = 3)
+      }
+    }
+  }
+  return(out)
+}
+
+
+```
+
+```{r}
+#| label: tbl-outcomes-subgroupef
+#| cache: true
+#| cache.comments: false
+#| dependson: outcomessubeffunc
+#| tbl-cap: "Association between COPD and outcomes in EF subgroups"
+
+cvdeathhfhosp <- outcomessubeffunc(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_deathcvhosphf",
+  eventname = "CVD/first HFH"
+)
+cvdeath <- outcomessubeffunc(
+  time = "sos_outtime_death",
+  event = "sos_out_deathcv",
+  eventname = "CVD"
+)
+hfhosp <- outcomessubeffunc(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_hosphf",
+  eventname = "First HFH"
+)
+rephfhosp <- outcomessubeffunc(
+  time = "sos_outtime_death",
+  event = "sos_out_counthosphf",
+  eventname = "Total HFH",
+  rep = TRUE
+)
+death <- outcomessubeffunc(
+  time = "sos_outtime_death",
+  event = "sos_out_death",
+  eventname = "All-cause death"
+)
+noncvdeath <- outcomessubeffunc(
+  time = "sos_outtime_death",
+  event = "sos_out_deathnoncv",
+  eventname = "Non-CVD"
+)
+outall <- rbind(
+  cvdeathhfhosp,
+  cvdeath,
+  hfhosp,
+  rephfhosp,
+  death,
+  noncvdeath
+)
+
+make_one_xlsxsheet(outall)
+
+colnames(outall) <- c("Outcome", "Model", rep(c("No COPD", "COPD"), 3), "p-value interaction")
+
+default_kable(outall) %>%
+  add_header_above(c(" " = 1, " " = 1, "HFrEF" = 2, "HFmrEF" = 2, "HFpEF" = 2, " " = 1))
+```
