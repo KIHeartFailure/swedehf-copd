@@ -83,6 +83,8 @@ logregout <- left_join(logregout,
 #| fig-width: 7
 #| fig-height: 10
 
+make_one_xlsxsheet(logregout %>% select(-cols, -label, -var2))
+
 size_use <- 10
 
 p <- ggplot(logregout, aes(x = or, y = var2, color = cols)) +
