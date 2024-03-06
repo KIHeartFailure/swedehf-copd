@@ -42,8 +42,12 @@ save(
 # create workbook to write tables to Excel
 wb <- openxlsx::createWorkbook()
 openxlsx::addWorksheet(wb, sheet = "Information")
-openxlsx::writeData(wb, sheet = "Information", x = "Tables in xlsx format for tables in Statistical report: Loop Diuretic Therapy as a Prognostic Enrichment Factor for Clinical Trials in Patients with Heart Failure with mrEF and pEF", rowNames = FALSE, keepNA = FALSE)
+openxlsx::writeData(wb, sheet = "Information", x = "Tables in xlsx format for tables in Statistical report: Chronic obstructive pulmonary disease (COPD) in SwedeHF", rowNames = FALSE, keepNA = FALSE)
 openxlsx::saveWorkbook(wb,
   file = here::here("output/tabs/tables.xlsx"),
   overwrite = TRUE
 )
+
+# create powerpoint to write figs to PowerPoint
+figs <- officer::read_pptx()
+print(figs, target = here::here("output/figs/figs.pptx"))

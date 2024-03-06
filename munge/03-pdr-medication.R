@@ -1,4 +1,4 @@
-load(file = paste0(datapath, "/data/", datadate, "/lmswedehf.RData"))
+load(file = paste0(datapath, "/data/", datadate, "/20221012/lmswedehf.RData"))
 
 # Select ATC codes --------------------------------------------------------
 

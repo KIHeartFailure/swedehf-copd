@@ -62,7 +62,7 @@ tabvars <- c(
   "sos_lm_copd_all",
 
   # comorbs
-  "shf_smoke_cat",
+  "shf_smoke",
   "shf_sos_com_diabetes",
   "shf_sos_com_hypertension",
   "shf_sos_com_ihd",

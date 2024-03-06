@@ -183,8 +183,6 @@ outcomessubeffunc <- function(time, event, eventname, xvar = "sos_com_copd", int
   }
   return(out)
 }
-
-
 ```
 
 ```{r}
@@ -225,7 +223,7 @@ noncvdeath <- outcomessubeffunc(
   event = "sos_out_deathnoncv",
   eventname = "Non-CVD"
 )
-outall <- rbind(
+outallef <- rbind(
   cvdeathhfhosp,
   cvdeath,
   hfhosp,
@@ -234,10 +232,10 @@ outall <- rbind(
   noncvdeath
 )
 
-make_one_xlsxsheet(outall)
+make_one_xlsxsheet(outallef)
 
-colnames(outall) <- c("Outcome", "Model", rep(c("No COPD", "COPD"), 3), "p-value interaction")
+colnames(outallef) <- c("Outcome", "Model", rep(c("No COPD", "COPD"), 3), "p-value interaction")
 
-default_kable(outall) %>%
+default_kable(outallef) %>%
   add_header_above(c(" " = 1, " " = 1, "HFrEF" = 2, "HFmrEF" = 2, "HFpEF" = 2, " " = 1))
 ```

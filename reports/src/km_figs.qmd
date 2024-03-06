@@ -83,6 +83,7 @@ kmfunc <- function(cox, time, event, eventname, xvar, data, rep = FALSE, endfoll
     )
 
   km <- (p / t) + plot_layout(height = c(1, .25))
+  create_pptx(km)
   km
 }
 ```
@@ -91,13 +92,33 @@ kmfunc <- function(cox, time, event, eventname, xvar, data, rep = FALSE, endfoll
 #| label: fig-km-all
 #| cache: true
 #| cache.comments: false
-#| dependson: kmfunc, tbl-outcomes
+#| dependson: kmfunc, outcomesfunc
 #| fig-cap: "Cumulative incidence curve for CVD/first HFH"
 #| fig-width: 10
 #| fig-height: 6
 
-coxinfo <- outall[2:3, 4]
-coxinfo <- gsub("\\,.*", "", coxinfo)
+mod <- summary(coxph(formula(paste0("Surv(sos_outtime_hosphf, sos_out_deathcvhosphf == 'Yes') ~ sos_com_copd")),
+  data = rsdata
+))
+
+coxvars <- modvars
+coxvars[modvars %in% stratavars] <- paste0("strata(", coxvars[modvars %in% stratavars], ")")
+modadj <- summary(pool(with(imprsdata, coxph(formula(paste0(
+  "Surv(sos_outtime_hosphf, sos_out_deathcvhosphf == 'Yes') ~ sos_com_copd + ", paste(coxvars, collapse = " + ")
+))))))
+
+coxinfo <- c(
+  paste0(
+    fn(mod$conf.int[, "exp(coef)"], dig = 2),
+    " (", fn(mod$conf.int[, "lower .95"], dig = 2),
+    "-", fn(mod$conf.int[, "upper .95"], dig = 2), ")"
+  ),
+  paste0(
+    fn(exp(modadj$estimate[1]), dig = 2),
+    " (", fn(exp(modadj$estimate[1] - global_z05 * modadj$std.error[1]), dig = 2),
+    "-", fn(exp(modadj$estimate[1] + global_z05 * modadj$std.error[1]), dig = 2), ")"
+  )
+)
 
 kmfunc(
   cox = coxinfo,

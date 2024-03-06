@@ -17,6 +17,7 @@ rsdata <- rsdata %>%
       levels = 1:3,
       labels = c("No COPD", "COPD without hospitalization", "COPD >=1 hospitalization")
     ),
+    shf_smoke = fct_rev(shf_smoke),
     shf_indexyear_cat = factor(case_when(
       shf_indexyear <= 2010 ~ "2005-2010",
       shf_indexyear <= 2015 ~ "2011-2015",

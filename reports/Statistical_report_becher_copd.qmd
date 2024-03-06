@@ -56,6 +56,9 @@ load(here("data/clean-data/data.RData"))
 # load workbook to write tables to Excel
 wb <- loadWorkbook(here("output/tabs/tables.xlsx"))
 sheets <- names(wb)
+
+# load pptx file with figs
+figs <- officer::read_pptx(path = here::here("output/figs/figs.pptx"))
 ```           
 
 # Data
