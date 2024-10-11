@@ -56,4 +56,4 @@ Workflow:
 
 ## Publication
 
-... 
+DOI: 10.1002/ehf2.15127
